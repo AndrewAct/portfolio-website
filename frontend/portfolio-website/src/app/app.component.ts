@@ -11,5 +11,5 @@ import { filter } from 'rxjs/operators';
   imports: [CommonModule, RouterModule]
 })
 export class AppComponent {
-
+  title = "my-portfolio-website"
 }

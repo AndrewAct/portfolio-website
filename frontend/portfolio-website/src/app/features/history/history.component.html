@@ -1,1 +1,43 @@
-<p>history works!</p>
+<div class="history-container">
+  <img src="assets/images/homepage_image.jpg" [style.opacity]="0.7" alt="Background">
+
+  <div class="content-container">
+    <h1 class="text-4xl font-bold mb-8 text-white text-center">My Blog Posts</h1>
+
+    <div *ngIf="loading" class="text-center py-8">
+      <div class="loading-spinner"></div>
+      <p class="mt-4 text-white">Loading posts...</p>
+    </div>
+
+    <div *ngIf="error" class="text-center py-8 text-red-400">
+      {{ error }}
+    </div>
+
+    <div *ngIf="!loading && !error" class="posts-grid">
+      <div *ngFor="let post of mediumPosts" class="post-card">
+        <div class="post-content">
+          <h2 class="post-title">{{ post.title }}</h2>
+
+          <div class="post-metadata">
+            <span class="mr-4">{{ post.published_date | date }}</span>
+<!--            <span>{{ post.reading_time }} min read</span>-->
+          </div>
+
+          <div class="post-excerpt" [innerHTML]="getExcerpt(post.content)"></div>
+
+          <a [href]="post.link" target="_blank" class="read-more-btn">
+            Read More
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="medium-link">
+      <a href="https://medium.com/@andrewact"
+         target="_blank"
+         class="text-blue-300 hover:text-blue-400 transition-colors text-lg">
+        Learn more about my articles on Medium
+      </a>
+    </div>
+  </div>
+</div>
