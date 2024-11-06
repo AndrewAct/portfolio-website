@@ -1,0 +1,97 @@
+// features/home/home.component.scss
+.home-container {
+  position: fixed;  // Changed from relative to fixed
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #1a1a1a;  // Matching background color
+}
+
+img {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  min-width: 100%;
+  min-height: 100%;
+}
+
+// Add an overlay to make the transition smoother
+.home-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    rgba(0, 0, 0, 0.3),
+    rgba(0, 0, 0, 0.2)
+  );
+  z-index: 1;
+}
+
+.button-container {
+  position: relative;
+  z-index: 2;  // Increased z-index to appear above the overlay
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 20px;
+}
+
+button {
+  padding: 12px 24px;
+  font-size: 18px;
+  border: 2px solid white;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+  backdrop-filter: blur(5px);  // Add slight blur effect behind buttons
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);  // Slight lift effect on hover
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);  // Shadow on hover
+  }
+}
+
+// Media queries remain the same
+@media (max-width: 768px) {
+  .button-container {
+    gap: 15px;
+  }
+
+  button {
+    padding: 10px 20px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .button-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  button {
+    width: 200px;
+  }
+}
+
+// Add smooth scrolling if needed
+:host {
+  display: block;
+  height: 100vh;
+  background: #1a1a1a;  // Matching background color
+}

@@ -1,0 +1,70 @@
+.home-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+img {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;  // This ensures the image covers the container without distortion
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  min-width: 100%;
+  min-height: 100%;
+}
+
+.button-container {
+  position: relative;  // Changed from absolute for better responsiveness
+  z-index: 1;         // Ensure buttons appear above the image
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;    // Allow buttons to wrap on smaller screens
+  justify-content: center;
+  padding: 20px;      // Add some padding for smaller screens
+}
+
+button {
+  padding: 12px 24px;
+  font-size: 18px;
+  border: 2px solid white;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;  // Prevent button text from wrapping
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
+
+// Add media queries for better responsiveness
+@media (max-width: 768px) {
+  .button-container {
+    gap: 15px;
+  }
+
+  button {
+    padding: 10px 20px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .button-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  button {
+    width: 200px;  // Fixed width for mobile
+  }
+}
