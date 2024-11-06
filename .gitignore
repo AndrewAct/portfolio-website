@@ -3,3 +3,6 @@
 *.pyc
 *.pyo
 __pycache__/
+*.bkp
+frontend_memo.md
+frontend_process.md
