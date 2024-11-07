@@ -1,5 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+# from apps.services.url_shortener.router import router as url_shortener_router
+from apps.services.url_shortener.router import redirect_router, api_router
+# from apps.services.medium_posts.router import router as medium_posts_router // To be implemented
+from apps.services.url_shortener.database import init_db, close_db
+from apps.core.logger import setup_logging
 import httpx
 import feedparser
 from typing import List, Optional
@@ -8,7 +13,14 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 import re
 
-app = FastAPI()
+# Setup logging
+logger = setup_logging()
+
+app = FastAPI(
+    title="Andrew's Portfolio Website",
+    description="Collection of utility services including URL shortener and Medium posts fetcher",
+    version="0.0.1"
+)
 
 # Add CORS middleware
 app.add_middleware(
@@ -32,7 +44,14 @@ class MediumPost(BaseModel):
 
 @app.get("/")
 def hello_world():
-    return {"Hello": "World"}
+    return {
+        "message": "Welcome to Andrew's Portfolio Website",
+        "version": "0.0.1",
+        "services": [
+            "URL Shortener",
+            "Medium Posts Fetcher"
+        ]
+    }
 
 
 @app.get("/api/medium-posts/{username}", response_model=List[MediumPost])
@@ -79,3 +98,34 @@ async def get_medium_posts(username: str = "andrewact"):
         return posts
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/utilities")
+def get_utilities():
+    return {"Hello": "World"}
+
+
+# Mount the redirect router at root level
+app.include_router(
+    redirect_router,
+    tags=["URL Shortener Redirect"]
+)
+
+# Mount the API router with prefix
+app.include_router(
+    api_router,
+    prefix="/utilities/url_shortener",
+    tags=["URL Shortener API"]
+)
+
+
+@app.on_event("startup")
+async def startup_event():
+    logger.info("Initializing database connection...")
+    await init_db()
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    logger.info("Closing database connection...")
+    await close_db()
