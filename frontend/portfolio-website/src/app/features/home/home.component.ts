@@ -1,4 +1,3 @@
-// features/home/home.component.ts
 import {Component, OnInit} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {NavigationEnd, Router} from '@angular/router';
@@ -51,10 +50,4 @@ export class HomeComponent {
   }
 }
 
-// export class HomeComponent {
-//   constructor(private router: Router) {}
-//
-//   navigate(path: string) {
-//     this.router.navigate([`/${path}`]);
-//   }
-// }
+
