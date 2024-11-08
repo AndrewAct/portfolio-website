@@ -26,9 +26,11 @@ logger = logging.getLogger("url_shortener")
 
 
 class URLShortenerService:
-    # def __init__(self, domain: str = "andrewcee.io"):
     ## Not deployed yet, testing with localhost
-    def __init__(self, domain: str = "localhost:8000"):
+    # def __init__(self, domain: str = "localhost:8000"):
+
+    # If deployed (in production mode), change to andrewcee.io
+    def __init__(self, domain: str = "andrewcee.io"):
         self.domain = domain
         self.collection = get_collection()
 
