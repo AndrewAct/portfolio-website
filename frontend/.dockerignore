@@ -1,0 +1,10 @@
+portfolio-website/node_modules
+npm-debug.log
+Dockerfile_dev_bkp
+.dockerignore
+.git
+.gitignore
+README.md
+.env
+dist
+coverage

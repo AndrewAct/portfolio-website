@@ -22,13 +22,6 @@ export class UrlShortenerComponent implements OnInit {
   constructor(private urlShortenerService: UrlShortenerService) {}
 
   ngOnInit(): void {
-    // Load history only when user selected
-    // if (this.saveHistory) {
-    //   const savedUrls = localStorage.getItem('recentUrls');
-    //   if (savedUrls) {
-    //     this.recentUrls = JSON.parse(savedUrls);
-    //   }
-    // }
     const savedUrls = sessionStorage.getItem('recentUrls');
     if (savedUrls) {
       this.recentUrls = JSON.parse(savedUrls);
@@ -54,23 +47,6 @@ export class UrlShortenerComponent implements OnInit {
       });
   }
 
-  // deleteUrl(url: URLResponse): void {
-  //   const shortUrl = url.shortened_url.split('/').pop();
-  //   if (!shortUrl) return;
-  //
-  //   // this.urlShortenerService.deleteUrl(shortUrl)
-  //   this.urlShortenerService.deleteUrl({url: this.shortenedUrl})
-  //     .subscribe({
-  //       next: () => {
-  //         this.recentUrls = this.recentUrls.filter(u => u.shortened_url !== url.shortened_url);
-  //         this.saveRecentUrls();
-  //       },
-  //       error: (error) => {
-  //         this.error = 'Failed to delete URL. Please try again.';
-  //         console.error('Error deleting URL:', error);
-  //       }
-  //     });
-  // }
 
   deleteUrl(url: URLResponse): void {
     // No need to extract code from URL anymore
@@ -98,15 +74,11 @@ export class UrlShortenerComponent implements OnInit {
       });
   }
 
-  // private saveRecentUrls(): void {
-  //   if (this.saveHistory) {
-  //     localStorage.setItem('recentUrls', JSON.stringify(this.recentUrls.slice(0, 10)));
-  //   }
-  // }
 
   private saveRecentUrls(): void {
     sessionStorage.setItem('recentUrls', JSON.stringify(this.recentUrls.slice(0, 10)));
   }
+
   clearHistory(): void {
     localStorage.removeItem('recentUrls');
     this.recentUrls = [];

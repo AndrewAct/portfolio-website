@@ -1,11 +1,26 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import IndexModel, ASCENDING
+import certifi
 from ...config import get_settings
 
 settings = get_settings()
 
-# Create MongoDB client
-client = AsyncIOMotorClient(settings.mongodb_url)
+# Create MongoDB client with updated SSL/TLS configuration
+client = AsyncIOMotorClient(
+    settings.mongodb_url,
+    tlsCAFile=certifi.where(),  # Explicitly specify the CA file
+    serverSelectionTimeoutMS=5000
+)
+
+
+# Verify the connection
+try:
+    # The ismaster command is cheap and does not require auth.
+    client.admin.command('ismaster')
+except Exception as e:
+    print(f"Failed to connect to MongoDB: {e}")
+    raise
+
 database = client[settings.mongodb_database]
 url_collection = database.urls
 

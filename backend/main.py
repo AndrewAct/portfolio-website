@@ -12,6 +12,7 @@ from pydantic import BaseModel
 import xml.etree.ElementTree as ET
 from datetime import datetime
 import re
+import os
 
 # Setup logging
 logger = setup_logging()
@@ -22,10 +23,30 @@ app = FastAPI(
     version="0.0.1"
 )
 
+# Get environment type (development or production)
+ENV = os.getenv("ENV", "development")
+
+if ENV == "development":
+    origins = [
+        "http://localhost:4200",  # Angular dev server
+        "http://localhost:80",    # Docker frontend port
+        "http://127.0.0.1:4200",
+        "http://127.0.0.1:80",
+    ]
+else:  # production
+    origins = [
+        "https://andrewcee.io",
+        "http://andrewcee.io",
+    ]
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200"],  # Add your frontend URL
+    allow_origins=origins,
+    # allow_origins=[
+    #     "http://localhost:4200",  # Development mode
+    #     "https://andrewcee.io"  # Production mode
+    # ],  # Add your frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
