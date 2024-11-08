@@ -2,12 +2,14 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { URLBase, URLResponse, DeleteURLRequest} from '../models/url.model';
+import { environment } from '../../../../environments/environment'
 
 @Injectable({
   providedIn: 'root'
 })
 export class UrlShortenerService {
-  private baseUrl = 'http://localhost:8000/utilities/url_shortener';
+  // private baseUrl = 'http://localhost:8000/utilities/url_shortener'; // Development mode
+  private baseUrl = 'https://andrewcee.io/utilities/url_shortener'; // Production mode
 
   constructor(private http: HttpClient) {}
 
