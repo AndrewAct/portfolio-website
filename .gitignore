@@ -12,3 +12,8 @@ archives/
 backend_structure.md
 url_shortener_process.txt
 test_url_shortener.txt
+dockerhub_instruction.md
+deploy_on_lightsail.md
+andrewcee_io.pem
+andrewcee_io.private_key
+**Dockerfile_bkp

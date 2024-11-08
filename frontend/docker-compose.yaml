@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: .
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./portfolio-website:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
