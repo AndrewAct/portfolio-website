@@ -1,8 +1,14 @@
 <div class="home-container">
   <img src="assets/images/homepage_image.jpg" [style.opacity]="0.7" alt="Background">
-  <div class="button-container">
-    <button class="url-shortener-button" (click)="onUrlShortenerClick()">
-      URL Shortener
-    </button>
+  <div class="content-container">
+    <div class="button-container">
+      <button class="url-shortener-button" (click)="onUrlShortenerClick()">
+        URL Shortener
+      </button>
+    </div>
+
+    <div *ngIf="showUrlShortener" class="url-shortener-wrapper">
+      <app-url-shortener></app-url-shortener>
+    </div>
   </div>
 </div>

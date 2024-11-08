@@ -1,0 +1,41 @@
+<div class="url-shortener-container">
+  <h2>URL Shortener</h2>
+
+  <div class="input-container">
+    <input
+      type="text"
+      [(ngModel)]="urlInput"
+      placeholder="Enter your URL here"
+      (keyup.enter)="shortenUrl()"
+    >
+    <button (click)="shortenUrl()" [disabled]="!urlInput">
+      Shorten URL
+    </button>
+  </div>
+
+  <div *ngIf="error" class="error-message">
+    {{ error }}
+  </div>
+
+  <div *ngIf="shortenedUrl" class="result-container">
+    <div class="url-display">
+      <span>Shortened URL:</span>
+      <a [href]="shortenedUrl" target="_blank">{{ shortenedUrl }}</a>
+      <button (click)="copyToClipboard(shortenedUrl)">Copy</button>
+    </div>
+  </div>
+
+  <div *ngIf="recentUrls.length > 0" class="recent-urls">
+    <h3>Recent URLs</h3>
+    <div *ngFor="let url of recentUrls" class="url-item">
+      <div class="url-details">
+        <span class="original-url">{{ url.original_url }}</span>
+        <a [href]="url.shortened_url" target="_blank">{{ url.shortened_url }}</a>
+      </div>
+      <div class="url-actions">
+        <button (click)="copyToClipboard(url.shortened_url)">Copy</button>
+        <button class="delete-btn" (click)="deleteUrl(url)">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>

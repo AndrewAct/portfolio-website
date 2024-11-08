@@ -2,7 +2,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import RedirectResponse
 from typing import Dict
-from .schemas import URLBase, URLResponse
+from .schemas import URLBase, URLResponse, DeleteURLRequest
 from .service import URLShortenerService
 import logging
 
@@ -67,11 +67,12 @@ async def get_original_url(short_url: str) -> Dict[str, str]:
         )
 
 
-@api_router.delete("/{short_url}")
-async def delete_url(short_url: str) -> Dict[str, str]:
+# @api_router.delete("/{short_url}")
+@api_router.delete("/")
+async def delete_url(request: DeleteURLRequest,) -> Dict[str, str]:
     try:
-        logger.info(f"Deleting URL mapping for code: {short_url}")
-        await url_shortener_service.delete_url(short_url)
+        logger.info(f"Deleting URL mapping for code: {request.url}")
+        await url_shortener_service.delete_url(request.url)
         return {"message": "URL mapping deleted successfully"}
     except Exception as e:
         logger.error(f"Error deleting URL mapping: {str(e)}")
