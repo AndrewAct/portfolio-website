@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from datetime import datetime
 from .models import URLMapping
 from .database import get_collection
-from .schemas import URLResponse
+from .schemas import URLResponse, DeleteURLRequest
 import validators
 import sys
 import logging

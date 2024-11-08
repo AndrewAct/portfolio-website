@@ -34,12 +34,12 @@ img {
 button {
   padding: 12px 24px;
   font-size: 18px;
-  border: 2px solid white;
   background: rgba(0, 0, 0, 0.6);
   color: white;
   cursor: pointer;
   transition: all 0.3s;
-  white-space: nowrap;  // Prevent button text from wrapping
+  white-space: nowrap;
+  border: none;  // Remove border
 
   &:hover {
     background: rgba(255, 255, 255, 0.2);
@@ -66,5 +66,42 @@ button {
 
   button {
     width: 200px;  // Fixed width for mobile
+  }
+}
+
+.content-container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.url-shortener-wrapper {
+  margin-top: 2rem;
+
+  // Remove any potential borders from the app-url-shortener component
+  app-url-shortener {
+    display: block;
+    border: none;
+    outline: none;
+
+    ::ng-deep {
+      // Force remove any borders from child elements
+      * {
+        border: none !important;
+      }
+
+      // Only keep specific borders if needed (like input fields)
+      input {
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      }
+
+      // Keep bottom border for list items
+      .url-item {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+      }
+    }
   }
 }
