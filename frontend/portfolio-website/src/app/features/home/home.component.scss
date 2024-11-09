@@ -68,3 +68,55 @@ button {
     width: 200px;  // Fixed width for mobile
   }
 }
+
+.social-buttons {
+  position: fixed;
+  bottom: 2rem;
+  left: 2rem;
+  display: flex;
+  gap: 1rem;
+  z-index: 10;
+}
+
+.social-button {
+  width: 28px;
+  height: 28px;
+  border-radius: 2px;  // Slight rounding of corners but maintaining square shape
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+
+  img {
+    width: 20px;  // Slightly larger icons since we're using square shape
+    height: 20px;
+    position: static; // Override the existing img styles
+    object-fit: contain;
+  }
+
+  &:hover {
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+}
+
+@media (max-width: 768px) {
+  .social-buttons {
+    bottom: 1rem;
+    left: 1rem;
+  }
+
+  .social-button {
+    width: 28px;
+    height: 28px;
+
+    img {
+      width: 16px;
+      height: 16px;
+    }
+  }
+}
