@@ -1,10 +1,18 @@
 # Portfolio Website of Andrew Chen 
 
 v0.0.1 
-* Medium Articles 
-* API for URL Shortener
+
+* Homepage
 
 ![image info](./images/homepage.png)
+
+* Medium Articles 
+
+![image info](./images/medium_posts.png)
+
+* URL Shortener
+
+![image info](./images/url_shortener.png)
 
 ### Roadmap
 - [ ] Frontend: Support URL Shortener functionality (Expected: Nov 7, 2024)
