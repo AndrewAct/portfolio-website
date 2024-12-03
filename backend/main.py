@@ -5,6 +5,9 @@ from apps.services.url_shortener.router import redirect_router, api_router
 # from apps.services.medium_posts.router import router as medium_posts_router // To be implemented
 from apps.services.url_shortener.database import init_db, close_db
 from apps.core.logger import setup_logging
+from apps.monitoring.telemetry import setup_telemetry
+from apps.monitoring.prometheus import router as metrics_router
+from apps.monitoring.middleware import PrometheusMiddleWare
 import httpx
 import feedparser
 from typing import List, Optional
@@ -138,6 +141,16 @@ app.include_router(
     prefix="/utilities/url_shortener",
     tags=["URL Shortener API"]
 )
+
+
+# Add observability with OpenTelemetry
+setup_telemetry(app)
+
+# Add metrics endpoint
+app.include_router(metrics_router, tags=['Monitoring'])
+
+# Integrate middleware
+app.middleware("http")(PrometheusMiddleWare())
 
 
 @app.on_event("startup")
