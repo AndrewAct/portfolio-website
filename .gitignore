@@ -19,3 +19,8 @@ andrewcee_io.private_key
 **Dockerfile_bkp
 **Dockerfile_dev_bkp
 cache_clean_solution.md
+*mock_prometheus.py
+*mock_system_prom.py
+*otlp_and_tempo.md
+*otlp_prom_structure.md
+*prometheus_metrics_tbd.md
