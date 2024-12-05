@@ -1,23 +1,34 @@
 from fastapi import Request
-from .prometheus import http_requests_total, http_request_duration_seconds
+from .prometheus import track_metrics
 import time
 
 
-class PrometheusMiddleWare:
+class PrometheusMiddleware:
     async def __call__(self, request: Request, call_next):
         start_time = time.time()
-        response = await call_next(request)
-        duration = time.time() - start_time
 
-        http_requests_total.labels(
-            method=request.method,
-            endpoint=request.url.path,
-            status=response.status_code
-        ).inc()
+        try:
+            response = await call_next(request)
+            duration = time.time() - start_time
 
-        http_request_duration_seconds.labels(
-            method=request.method,
-            endpoint=request.url.path
-        ).observe(duration)
+            # Skip tracking for healthcheck endpoint
+            if not request.url.path.startswith("/metrics"):
+                track_metrics(
+                    method=request.method,
+                    endpoint=request.url.path,
+                    status_code=response.status_code,
+                    duration=duration
+                )
 
-        return response
+            return response
+
+        except Exception as e:
+            duration = time.time() - start_time
+            # Track failed requests
+            track_metrics(
+                method=request.method,
+                endpoint=request.url.path,
+                status_code=500,
+                duration=duration
+            )
+            raise e

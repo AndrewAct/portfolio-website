@@ -6,8 +6,11 @@ from apps.services.url_shortener.router import redirect_router, api_router
 from apps.services.url_shortener.database import init_db, close_db
 from apps.core.logger import setup_logging
 from apps.monitoring.telemetry import setup_telemetry
+# from apps.monitoring.prometheus import PrometheusMiddleware
+# from apps.monitoring.middleware import PrometheusMiddleWare
 from apps.monitoring.prometheus import router as metrics_router
-from apps.monitoring.middleware import PrometheusMiddleWare
+from apps.monitoring.middleware import PrometheusMiddleware
+from apps.monitoring.metrics_collector import MetricsCollector
 import httpx
 import feedparser
 from typing import List, Optional
@@ -150,8 +153,11 @@ setup_telemetry(app)
 app.include_router(metrics_router, tags=['Monitoring'])
 
 # Integrate middleware
-app.middleware("http")(PrometheusMiddleWare())
+app.middleware("http")(PrometheusMiddleware())
+# app.add_middleware(PrometheusMiddleware)
 
+metrics_collector = MetricsCollector(app, collection_interval=60)  # Collect on minute basis
+metrics_collector.start()
 
 @app.on_event("startup")
 async def startup_event():
