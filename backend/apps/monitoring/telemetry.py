@@ -8,8 +8,10 @@ from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.sdk.resources import Resource
 from fastapi import FastAPI
 from ..config import get_settings
+from ..core.logger import setup_logging
 
 settings = get_settings()
+logger = setup_logging()
 
 
 def setup_telemetry(app: FastAPI):
@@ -32,6 +34,7 @@ def setup_telemetry(app: FastAPI):
     })
 
     # Initialize tracer with resource
+    logger.info("Setting up the OTLP provider for traces")
     provider = TracerProvider(resource=resource)
     trace.set_tracer_provider(provider)
 
@@ -45,16 +48,18 @@ def setup_telemetry(app: FastAPI):
     )
 
     # Add BatchSpanProcessor to the trace provider
+    logger.info("Add BatchSpanProcessor to the trace provider")
     processor = BatchSpanProcessor(otlp_exporter)
     provider.add_span_processor(processor)
 
     # Initialize FastAPI instrumentation with custom configuration
+    logger.info("Initialize instrumentation for OTLP")
     FastAPIInstrumentor.instrument_app(
         app,
         tracer_provider=provider,
-        excluded_urls="health,metrics",  # Healthcheck is excluded (not necessary)
+        excluded_urls="health,metrics",  # Healthcheck is excluded (not necessary), and the metrics itself is excluded
         server_request_hook=lambda span, scope: span.set_attribute(
-            "service.name", "urlshortener-api"
+            "service.name", "fastapi-monitor"
         ),
     )
 

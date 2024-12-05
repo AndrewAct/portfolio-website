@@ -17,6 +17,7 @@ opentelemetry-exporter-otlp
 opentelemetry-exporter-otlp-proto-http
 opentelemetry-instrumentation-requests
 prometheus-client
+psutil
 pydantic>=2.5.2
 pydantic_core==2.23.4
 pymongo[srv]==4.6.1
