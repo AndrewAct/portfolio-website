@@ -2,9 +2,18 @@
 <div class="home-container">
   <img src="assets/images/homepage_image.jpg" [style.opacity]="0.7" alt="Background">
   <div class="button-container">
-    <button (click)="navigate('history')">History</button>
-    <button (click)="navigate('2024')">2024</button>
-    <button (click)="navigate('utilities')">Utilities</button>
+    <button (click)="navigate('history')" class="tooltip-container">
+      History
+      <span class="tooltip">Feel free to check out my articles on Medium!</span>
+    </button>
+    <button (click)="navigate('utilities')" class="tooltip-container">
+      Utilities
+      <span class="tooltip">Some utilities you might enjoy. Currently include: URL Shortener. More features will come in soon!</span>
+    </button>
+    <a href="https://andrewisgrinding.grafana.net/public-dashboards/c417bb15c3da45f2abefb1dcfd5076fe" target="_blank" class="button tooltip-container">
+      Observability
+      <span class="tooltip">Click this button to view the Grafana monitoring dashboard for my website</span>
+    </a>
   </div>
 
   <div class="social-buttons">
@@ -13,6 +22,9 @@
     </a>
     <a href="https://www.linkedin.com/in/zhuo-chen-503890171/" target="_blank" class="social-button">
       <img src="assets/images/linkedin.svg" alt="LinkedIn">
+    </a>
+    <a href="https://andrewact.medium.com/" target="_blank" class="social-button">
+      <img src="assets/images/medium.svg" alt="Medium">
     </a>
   </div>
 </div>
