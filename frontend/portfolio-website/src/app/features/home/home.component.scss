@@ -46,6 +46,59 @@ button {
   }
 }
 
+.tooltip-container {
+  position: relative;
+  display: inline-block;
+
+  padding: 12px 24px;
+  font-size: 18px;
+  border: 2px solid white;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-decoration: none;  // Remove underline or other decoration
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+
+    .tooltip {
+      visibility: visible;
+      opacity: 1;
+    }
+  }
+}
+
+.tooltip {
+  visibility: hidden;
+  position: absolute;
+  bottom: -45px;  // Tooltip position
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 100;
+
+  // Add arrow
+  &::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 0 5px 5px 5px;
+    border-style: solid;
+    border-color: transparent transparent rgba(0, 0, 0, 0.8) transparent;
+  }
+}
+
+
 // Add media queries for better responsiveness
 @media (max-width: 768px) {
   .button-container {
@@ -118,5 +171,18 @@ button {
       width: 16px;
       height: 16px;
     }
+  }
+}
+
+@media (max-width: 768px) {
+  .tooltip-container {
+    padding: 10px 20px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tooltip-container {
+    width: 200px;
   }
 }
