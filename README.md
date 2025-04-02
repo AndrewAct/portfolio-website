@@ -15,10 +15,11 @@ v0.0.1
 ![image info](./images/url_shortener.png)
 
 ### Roadmap
-- [ ] Frontend: Support URL Shortener functionality (Expected: Nov 7, 2024)
-- [ ] Deploy on AWS Elastic Beanstalk (TBD) 
+- [ ] New feature: Horoscope
+- [x] Frontend: Support URL Shortener functionality 
+- [x] Deploy on AWS Elastic Lightsail
 - [ ] Integrate GitHub Actions and workflow (TBD)
-- [ ] Utilities and other functionalities
+- [x] Utilities and other functionalities
 - [x] Backend backbone: uses FastAPI and Python (Expected: Nov 5, 2024)
 - [x] Retrieve articles from Medium (https://andrewact.medium.com/) 
 - [x] Frontend (raw): uses Angular and TypeScript (Expected: Nov 6, 2024)
