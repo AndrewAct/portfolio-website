@@ -27,18 +27,54 @@ export function app(): express.Express {
 
   // All regular routes use the Angular engine
   server.get('**', (req, res, next) => {
-    const { protocol, originalUrl, baseUrl, headers } = req;
+    try {
+      const { protocol, originalUrl, baseUrl, headers } = req;
 
-    commonEngine
-      .render({
-        bootstrap,
-        documentFilePath: indexHtml,
-        url: `${protocol}://${headers.host}${originalUrl}`,
-        publicPath: browserDistFolder,
-        providers: [{ provide: APP_BASE_HREF, useValue: baseUrl }],
-      })
-      .then((html) => res.send(html))
-      .catch((err) => next(err));
+      // Process URL and ensure it is safe
+      let safeUrl;
+      try {
+        const host = headers.host || 'localhost';
+        safeUrl = `${protocol}://${host}${originalUrl}`;
+        new URL(safeUrl);
+      } catch (urlError) {
+        console.error('Invalid URL detected:', urlError);
+        res.status(400).send('Bad Request: Invalid URL');
+        return;
+      }
+
+      commonEngine
+        .render({
+          bootstrap,
+          documentFilePath: indexHtml,
+          url: safeUrl,
+          publicPath: browserDistFolder,
+          providers: [{ provide: APP_BASE_HREF, useValue: baseUrl }],
+        })
+        .then((html) => {
+          res.send(html);
+        })
+        .catch((renderErr) => {
+          console.error('SSR Render Error:', renderErr);
+
+          // Return error information
+          if (renderErr instanceof URIError) {
+            res.status(400).send('Bad Request: URI malformed');
+            return;
+          }
+
+          next(renderErr);
+        });
+    } catch (err) {
+      console.error('Express route error:', err);
+
+      // Process URI errors
+      if (err instanceof URIError) {
+        res.status(400).send('Bad Request: URI malformed');
+        return;
+      }
+
+      next(err);
+    }
   });
 
   return server;
