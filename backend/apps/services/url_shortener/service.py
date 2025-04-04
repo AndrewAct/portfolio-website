@@ -15,15 +15,6 @@ import logging
 logger = logging.getLogger("url_shortener")
 
 
-# print("Python path:", sys.path)
-#
-# try:
-#     import validators
-#     print("Successfully imported validators version:", validators.__version__)
-# except ImportError as e:
-#     print("Failed to import validators:", str(e))
-#     print("Python path:", sys.path)
-
 
 class URLShortenerService:
     ## Not deployed yet, testing with localhost

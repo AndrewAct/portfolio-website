@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     grafana_api_key: str
     grafana_otlp_endpoint: str
 
+    # Add variables for DeepSeek API key
+    deepseek_api_key: str = ""
+
     model_config = SettingsConfigDict(
         env_file='.env',
         env_file_encoding='utf-8',
