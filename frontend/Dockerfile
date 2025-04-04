@@ -17,6 +17,7 @@ COPY portfolio-website/ .
 # Expose port
 EXPOSE 4200
 
-# Start the application using ng serve
-# CMD ["npm", "start", "--", "--host", "0.0.0.0"]
-CMD ng serve --port 4200 --host 0.0.0.0  --disable-host-check
+#CMD VITE_DISABLE_ERROR_OVERLAY=true ng serve --port 4200 --host 0.0.0.0 --disable-host-check
+# Disable Vite error overlay
+ENV VITE_DISABLE_ERROR_OVERLAY=true
+CMD ["ng", "serve", "--port", "4200", "--host", "0.0.0.0", "--disable-host-check"]
