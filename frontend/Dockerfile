@@ -17,7 +17,6 @@ COPY portfolio-website/ .
 # Expose port
 EXPOSE 4200
 
-#CMD VITE_DISABLE_ERROR_OVERLAY=true ng serve --port 4200 --host 0.0.0.0 --disable-host-check
-# Disable Vite error overlay
+# Disable Vite error overlay and run in production mode
 ENV VITE_DISABLE_ERROR_OVERLAY=true
-CMD ["ng", "serve", "--port", "4200", "--host", "0.0.0.0", "--disable-host-check"]
+CMD ["ng", "serve", "--configuration", "production", "--port", "4200", "--host", "0.0.0.0", "--disable-host-check"]

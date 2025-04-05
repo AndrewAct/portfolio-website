@@ -46,7 +46,11 @@ export class HomeComponent {
   }
 
   navigate(path: string) {
-    this.router.navigate([`/${path}`]);
+    const encodedPath = path.split('/')
+    .map(segment => segment ? encodeURIComponent(segment) : '')
+    .join('/');
+
+    this.router.navigate([`/${encodedPath}`]);
   }
 }
 
