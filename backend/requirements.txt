@@ -57,7 +57,7 @@ mistune==0.8.4
 motor==3.6.1
 mysql==0.0.3
 mysql-client==0.0.1
-mysql-connector-python==8.0.29
+mysql-connector-python==9.1.0
 mysqlclient==2.1.1
 nbclient==0.6.0
 nbconvert==6.5.0
