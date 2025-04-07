@@ -4,10 +4,7 @@ from typing import Dict, Any
 from .service import HoroscopeService
 from .schemas import HoroscopeResponse, BirthdateRequest
 
-router = APIRouter(
-    prefix="/horoscope",
-    tags=["horoscope"],
-)
+router = APIRouter()
 
 def get_horoscope_service():
     return HoroscopeService()

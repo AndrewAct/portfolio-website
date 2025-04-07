@@ -11,6 +11,7 @@ from apps.monitoring.telemetry import setup_telemetry
 from apps.monitoring.prometheus import router as metrics_router
 from apps.monitoring.middleware import PrometheusMiddleware
 from apps.monitoring.metrics_collector import MetricsCollector
+from apps.services.horoscope.router import router as horoscope_router
 import httpx
 import feedparser
 from typing import List, Optional
@@ -25,8 +26,8 @@ logger = setup_logging()
 
 app = FastAPI(
     title="Andrew's Portfolio Website",
-    description="Collection of utility services including URL shortener and Medium posts fetcher",
-    version="0.0.1"
+    description="Collection of utility services. Including Medium posts fetcher, URL shortener, and Horoscope",
+    version="0.0.2"
 )
 
 # Get environment type (development or production)
@@ -143,6 +144,13 @@ app.include_router(
     api_router,
     prefix="/utilities/url_shortener",
     tags=["URL Shortener API"]
+)
+
+# Include API router for Horoscope as well
+app.include_router(
+    horoscope_router,
+    prefix="/utilities/horoscope",
+    tags=["Horoscope"]
 )
 
 

@@ -8,7 +8,7 @@ from typing import Tuple, Dict, Any
 from openai import OpenAI
 
 from ...core.logger import setup_logging
-logger = setup_logging()
+# logger = setup_logging("Horoscope")
 
 from ...config import get_settings
 settings = get_settings()
@@ -26,11 +26,11 @@ class HoroscopeService:
             "zh": ["白羊座", "金牛座", "双子座", "巨蟹座", "狮子座", "处女座",
                    "天秤座", "天蝎座", "射手座", "摩羯座", "水瓶座", "双鱼座"]
         }
-        self.logger = logging
+        self.logger = setup_logging("Horoscope")
 
     def get_zodiac_sign(self, birthdate: date, language: str = "en") -> Tuple[str, str]:
         """Determine zodiac sign based on birthdate."""
-        logger.info(f"Getting information for user with birthdate: {birthdate}")
+        self.logger.info(f"Getting information for user with birthdate: {birthdate}")
         month = birthdate.month
         day = birthdate.day
         index = -1
@@ -38,7 +38,7 @@ class HoroscopeService:
         try:
             index = self._get_index(month, day)
         except Exception as e:
-            logger.error(f"An error {str(e)} occurred when trying to get index for birthdate: {str(birthdate)}")
+            self.logger.error(f"An error {str(e)} occurred when trying to get index for birthdate: {str(birthdate)}")
 
         english_name = self.zodiac_names["en"][index]
         localized_name = self.zodiac_names[language][index] if language in self.zodiac_names else english_name
@@ -92,7 +92,7 @@ class HoroscopeService:
 
                             return horoscope_data
                         except json.JSONDecodeError as json_error:
-                            logger.error(f"Failed to parse JSON content: {str(json_error)}")
+                            self.logger.error(f"Failed to parse JSON content: {str(json_error)}")
                             try:
                                 cleaned_text = re.sub(r'[^\x00-\x7F]+', ' ', horoscope_text)
                                 cleaned_text = cleaned_text.replace('\n', ' ').replace('\\', '\\\\')
@@ -109,20 +109,20 @@ class HoroscopeService:
                             except:
                                 return self._generate_fallback_horoscope(zodiac_sign, language)
                     else:
-                        logger.error("Response does not have choice field as expected")
+                        self.logger.error("Response does not have choice field as expected")
                         return self._generate_fallback_horoscope(zodiac_sign, language)
 
                 except Exception as api_error:
-                    logger.error(f"Error happened when trying to make API call: {str(api_error)}")
+                    self.logger.error(f"Error happened when trying to make API call: {str(api_error)}")
                     import traceback
                     traceback.print_exc()
                     return self._generate_fallback_horoscope(zodiac_sign, language)
             else:
-                logger.error("No API Key provided")
+                self.logger.error("No API Key provided")
                 return self._generate_fallback_horoscope(zodiac_sign, language)
 
         except Exception as e:
-            logger.error(f"Error occurred before making API call: {str(e)}")
+            self.logger.error(f"Error occurred before making API call: {str(e)}")
             import traceback
             traceback.print_exc()
             return self._generate_fallback_horoscope(zodiac_sign, language)
