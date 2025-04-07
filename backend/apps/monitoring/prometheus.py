@@ -16,7 +16,7 @@ from typing import Dict
 from fastapi.background import BackgroundTasks
 
 settings = get_settings()
-logger = setup_logging()
+logger = setup_logging("OTLP Prometheus")
 
 # Create desired metrics
 http_requests_total = Counter(
