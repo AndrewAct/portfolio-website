@@ -20,7 +20,7 @@ decorator==5.1.1
 defusedxml==0.7.1
 Deprecated==1.2.18
 distro==1.9.0
-Django==4.0.6
+Django==4.2.20
 django-crispy-forms==1.14.0
 dnspython==2.6.1
 entrypoints==0.4
