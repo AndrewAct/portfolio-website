@@ -28,13 +28,14 @@ RUN pip uninstall -y bson
 # Copy and install requirements first (for better caching)
 COPY requirements.txt .
 
-# Install MongoDB-related packages and requirements
+## Install MongoDB-related packages and requirements
 RUN pip install --no-cache-dir \
-    "pymongo[srv]==4.6.1" \
-    "motor==3.3.2" \
+    "pymongo[srv]==4.9.2" \
+    "motor==3.6.1" \
     "pydantic>=2.5.2" \
     "pydantic-settings>=2.1.0" \
     -r requirements.txt
+
 
 # Final stage
 FROM python:3.11-alpine

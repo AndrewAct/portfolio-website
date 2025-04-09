@@ -31,7 +31,7 @@ img {
   padding: 20px;      // Add some padding for smaller screens
 }
 
-button {
+button, .button {
   padding: 12px 24px;
   font-size: 18px;
   border: 2px solid white;
@@ -40,6 +40,7 @@ button {
   cursor: pointer;
   transition: all 0.3s;
   white-space: nowrap;  // Prevent button text from wrapping
+  text-align: center;
 
   &:hover {
     background: rgba(255, 255, 255, 0.2);
@@ -58,6 +59,7 @@ button {
   cursor: pointer;
   transition: all 0.3s;
   text-decoration: none;  // Remove underline or other decoration
+  text-align: center;
 
   &:hover {
     background: rgba(255, 255, 255, 0.2);
