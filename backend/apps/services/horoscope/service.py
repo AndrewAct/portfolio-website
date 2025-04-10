@@ -223,9 +223,9 @@ class HoroscopeService:
             """
         else:
             prompt = f"""
-            Generate a daily horoscope for a {gender} who is a {zodiac_sign}. 
-            Include their overall forecast for today, a lucky number between 1 and 100, 
-            a compatible zodiac sign for today, and a mood descriptor. 
+            Generate a daily horoscope for a {gender} who is a {zodiac_sign}.
+            Include their overall forecast for today, a lucky number between 1 and 100,
+            a compatible zodiac sign for today, and a mood descriptor.
             Format the response as JSON with the following structure:
             {{
                 "daily_horoscope": "detailed horoscope text (150-200 words)",
