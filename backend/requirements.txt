@@ -31,7 +31,7 @@ h11==0.14.0
 httpcore==1.0.6
 httpx==0.27.2
 jedi==0.18.1
-Jinja2==3.1.1
+Jinja2==3.1.6
 jiter==0.9.0
 jsonschema==4.4.0
 jupyter==1.0.0
