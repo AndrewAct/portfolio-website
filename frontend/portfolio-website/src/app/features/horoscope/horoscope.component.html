@@ -1,0 +1,63 @@
+<div class="horoscope-container">
+  <div class="horoscope-form-card">
+    <h2>Daily Horoscope</h2>
+    <p class="subtitle">Find out what the stars have in store for you today!</p>
+
+    <form [formGroup]="horoscopeForm" (ngSubmit)="onSubmit()">
+      <div class="form-group">
+        <label for="birthdate">Birthdate</label>
+        <input
+          type="date"
+          id="birthdate"
+          formControlName="birthdate"
+          [max]="maxDate"
+          class="form-control">
+        <div class="error-message" *ngIf="horoscopeForm.get('birthdate')?.invalid && horoscopeForm.get('birthdate')?.touched">
+          Please select your birthdate
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="gender">Gender</label>
+        <select id="gender" formControlName="gender" class="form-control">
+          <option *ngFor="let gender of genders" [value]="gender.value">{{ gender.label }}</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="language">Language</label>
+        <select id="language" formControlName="language" class="form-control">
+          <option *ngFor="let language of languages" [value]="language.value">{{ language.label }}</option>
+        </select>
+      </div>
+
+      <button type="submit" class="submit-btn" [disabled]="horoscopeForm.invalid || loading">
+        <span *ngIf="!loading">Get Horoscope</span>
+        <span *ngIf="loading" class="loading-spinner"></span>
+      </button>
+    </form>
+  </div>
+
+  <div class="horoscope-result" *ngIf="horoscope">
+    <div class="horoscope-card">
+      <div class="horoscope-header">
+        <h3>{{ horoscope.zodiac_sign }}</h3>
+        <p *ngIf="horoscope.zodiac_sign_chinese" class="chinese-sign">{{ horoscope.zodiac_sign_chinese }}</p>
+        <p class="date">{{ today | date }}</p>
+      </div>
+      <div class="horoscope-content">
+        <p>{{ horoscope.daily_horoscope }}</p>
+
+        <div class="horoscope-details" *ngIf="horoscope.lucky_number || horoscope.compatibility || horoscope.mood">
+          <p *ngIf="horoscope.lucky_number">Lucky Number: {{ horoscope.lucky_number }}</p>
+          <p *ngIf="horoscope.compatibility">Compatibility: {{ horoscope.compatibility }}</p>
+          <p *ngIf="horoscope.mood">Mood: {{ horoscope.mood }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="error-container" *ngIf="error">
+    <div class="error-message">{{ error }}</div>
+  </div>
+</div>
