@@ -20,4 +20,6 @@ EXPOSE 4200
 #CMD VITE_DISABLE_ERROR_OVERLAY=true ng serve --port 4200 --host 0.0.0.0 --disable-host-check
 # Disable Vite error overlay
 ENV VITE_DISABLE_ERROR_OVERLAY=true
+ENV NODE_ENV=production
+
 CMD ["ng", "serve", "--port", "4200", "--host", "0.0.0.0", "--disable-host-check"]
