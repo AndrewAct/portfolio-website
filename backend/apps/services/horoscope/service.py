@@ -15,10 +15,14 @@ settings = get_settings()
 
 class HoroscopeService:
     def __init__(self):
-        self.api_key = settings.deepseek_api_key
+        # self.api_key = settings.deepseek_api_key
+        self.api_key = settings.openai_api_key
+        # self.client = OpenAI(
+        #     api_key=self.api_key,
+        #     base_url="https://api.deepseek.com"
+        # )
         self.client = OpenAI(
-            api_key=self.api_key,
-            base_url="https://api.deepseek.com"
+            api_key=self.api_key
         )
         self.zodiac_names = {
             "en": ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
@@ -53,32 +57,28 @@ class HoroscopeService:
 
             if self.api_key:
                 try:
-                    messages = [
-                        {"role": "system",
-                         "content": "You are a helpful assistant that provides accurate horoscope readings in valid JSON format, without markdown formatting."},
-                        {"role": "user", "content": prompt}
-                    ]
-
-                    response = self.client.chat.completions.create(
-                        model="deepseek-chat",
-                        messages=messages,
-                        temperature=0.7
+                    input_text = prompt
+                    response = self.client.responses.create(
+                        model="gpt-3.5-turbo",
+                        input=input_text,
                     )
 
-                    if hasattr(response, 'choices') and len(response.choices) > 0:
-                        horoscope_text = response.choices[0].message.content
+                    if hasattr(response, 'output') and len(response.output) > 0:
+                        # The output format referred to official doc:
+                        # https://platform.openai.com/docs/api-reference/responses/create
+                        horoscope_text = response.output[0].content[0].text
 
                         # Process potential Markdown output from Deepseek
                         if "```json" in horoscope_text:
                             # Extract JSON
                             json_start = horoscope_text.find('{')
                             json_end = horoscope_text.rfind('}') + 1
-                            if json_start >= 0 and json_end > json_start:
+                            if 0 <= json_start < json_end:
                                 horoscope_text = horoscope_text[json_start:json_end]
 
                         try:
                             horoscope_data = json.loads(horoscope_text)
-
+                            # logging.info(f"Got horoscope data: {horoscope_data}")
                             horoscope_data["zodiac_sign"] = zodiac_sign
 
                             if language == "zh" and zodiac_sign in self.zodiac_names["zh"]:
