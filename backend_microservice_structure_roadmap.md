@@ -5,12 +5,10 @@
 │
 ├── services/
 │   ├── history/
-│   ├── app/
-│   │   ├── models.py
-│   │   ├── schemas.py
-│   │   ├── router.py
-│   │   ├── service.py
-│   │   └── database.py
+│   │── ├── app/
+│   │   │   ├── schemas.py
+│   │   │   ├── router.py
+│   │   │   ├── service.py
 │   ├── main.py
 │   ├── Dockerfile
 │   └── requirements.txt
