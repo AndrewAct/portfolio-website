@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from router import router as history_router
-import os
+from config import get_cors_origins
 
 app = FastAPI(
     title="History Service",
@@ -9,22 +9,9 @@ app = FastAPI(
     version="0.2.0"
 )
 
-# Optional: CORS settings for frontend or other services
-ENV = os.getenv("ENV", "development")
-if ENV == "development":
-    origins = [
-        "http://localhost:4200",
-        "http://127.0.0.1:4200",
-        "http://localhost",
-    ]
-else:
-    origins = [
-        "https://andrewcee.io",
-    ]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=get_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
