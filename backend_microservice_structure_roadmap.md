@@ -4,11 +4,23 @@
 ├── .env.template
 │
 ├── services/
+│   ├── history/
+│   ├── app/
+│   │   ├── models.py
+│   │   ├── schemas.py
+│   │   ├── router.py
+│   │   ├── service.py
+│   │   └── database.py
+│   ├── main.py
+│   ├── Dockerfile
+│   └── requirements.txt
+│   │ 
 │   ├── url-shortener/
 │   │   ├── app/
 │   │   ├── main.py
 │   │   ├── Dockerfile
 │   │   └── requirements.txt
+│   │ 
 │   └── horoscope/
 │       ├── app/
 │       ├── main.py
@@ -22,6 +34,7 @@
 │       ├── exceptions.py
 │       ├── monitoring/
 │       └── __init__.py
+├── __init__.py
 │
 └── tests/
     └── integration/
