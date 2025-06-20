@@ -1,7 +1,14 @@
+import sys
+import os
+
+# Python does not suggest to use relative import when starting application ('./shared/config')
+# So I chose this method to add absolute path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from router import router as history_router
-from config import get_cors_origins
+from shared.config import get_cors_origins
 
 app = FastAPI(
     title="History Service",

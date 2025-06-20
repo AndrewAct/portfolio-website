@@ -2,10 +2,15 @@ FROM python:3.11-alpine
 
 WORKDIR /app
 
-COPY . .
+COPY services/history /app
+
+# Copy shared files (configs, logs, ...)
+COPY shared /app/shared
 
 RUN pip install --no-cache-dir --upgrade pip \
- && pip install --no-cache-dir -r requirements.txt
+ && pip install --no-cache-dir -r /app/requirements.txt
+
+ENV PYTHONPATH=/app
 
 EXPOSE 8001
 
