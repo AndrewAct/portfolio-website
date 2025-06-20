@@ -5,13 +5,12 @@
 │
 ├── services/
 │   ├── history/
-│   │── ├── app/
-│   │   │   ├── schemas.py
-│   │   │   ├── router.py
-│   │   │   ├── service.py
-│   ├── main.py
-│   ├── Dockerfile
-│   └── requirements.txt
+│   │   ├── schemas.py
+│   │   ├── router.py
+│   │   ├── service.py
+│   │   ├── main.py
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
 │   │ 
 │   ├── url-shortener/
 │   │   ├── app/
@@ -25,8 +24,7 @@
 │       ├── Dockerfile
 │       └── requirements.txt
 │
-├── libs/
-│   └── shared/
+│── shared/
 │       ├── config.py
 │       ├── logger.py
 │       ├── exceptions.py
