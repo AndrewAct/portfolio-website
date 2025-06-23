@@ -27,6 +27,13 @@ However, this violates "DRY" principle.
 
 I didn't find a better solution yet, so will stick with method for now.
 
+
+### Weather report 
+
+To run weather report, direct to `backend` directory.
+Then: run:
+   `uvicorn services.weather_report.main:app --reload`
+
 ### Roadmap
 - [ ] New feature: weather report
 - [ ] Refactor: microservices (expected by June 22, 2025)
