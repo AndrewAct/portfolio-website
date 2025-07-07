@@ -34,8 +34,15 @@ To run weather report, direct to `backend` directory.
 Then: run:
    `uvicorn services.weather_report.main:app --reload`
 
+Note:
+
+Although we have `mcp.py` in `weather_report` now, it is not a real MCP service.
+Will update soon...
+
 ### Roadmap
-- [ ] New feature: weather report
+- [ ] Weather report frontend (TBD)
+- [ ] Weather report MCP (expected by July 13, 2025)
+- [x] New feature: weather report
 - [ ] Refactor: microservices (expected by June 22, 2025)
 - [x] New feature: Horoscope
 - [x] Frontend: Support URL Shortener functionality 
