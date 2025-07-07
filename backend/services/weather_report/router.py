@@ -12,4 +12,7 @@ async def feath_weather_report(
 ):
     if not city and not zip_code:
         raise HTTPException(status_code=400, detail="Missing city info. Please provide city or zip code")
-    return await get_weather_report(city=city, zip_code=zip_code, language=language)
+    try:
+        return await get_weather_report(city=city, zip_code=zip_code, language=language)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
