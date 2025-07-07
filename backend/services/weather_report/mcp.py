@@ -96,7 +96,7 @@ async def generate_summary(payload: SummaryRequest):
     if alert_text:
         prompt += f"There is also an alert: {alert_text} "
 
-    prompt += "Be engaging, informative, and respect the persona style."
+    prompt += "Be engaging, informative, and respect the persona style. Feel free to use emoji and Kaomoji."
 
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",

@@ -34,7 +34,10 @@ To run weather report, direct to `backend` directory.
 Then: run:
    `uvicorn services.weather_report.main:app --reload`
 
-Note:
+If you want to run MCP as well, before run the command above, run this first:
+   `uvicorn services.weather_report.mcp:app --reload --port 8001`
+
+#### Note:
 
 Although we have `mcp.py` in `weather_report` now, it is not a real MCP service.
 Will update soon...
