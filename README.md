@@ -47,3 +47,10 @@ Then: run:
 - [x] Frontend (raw): uses Angular and TypeScript (Expected: Nov 6, 2024)
 - [x] Domain name service (andrewcee.io) (Expected: Nov 7, 2024)
 
+#### Weather Report To Do List
+
+- [ ] Update the schemas
+- [ ] Include more meaningful metrics 
+- [ ] Support language switch (refer to Open Weather API doc)
+- [ ] Support metric switch (Imperial, Metrics, Standard)
+
