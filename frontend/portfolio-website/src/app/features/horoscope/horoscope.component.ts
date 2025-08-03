@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import html2canvas from 'html2canvas';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { HoroscopeService } from './services/horoscope.service';
@@ -14,6 +15,7 @@ import { HoroscopeResponse } from './models/horoscope.model';
   styleUrls: ['./horoscope.component.scss']
 })
 export class HoroscopeComponent implements OnInit {
+  @ViewChild('horoscopeCard') horoscopeCard!: ElementRef;
   horoscopeForm: FormGroup;
   horoscope: HoroscopeResponse | null = null;
   today = new Date();
@@ -72,4 +74,26 @@ export class HoroscopeComponent implements OnInit {
         }
       });
   }
+
+  async downloadHoroscope(): Promise<void> {
+    if (!this.horoscope) return;
+
+    const card = this.horoscopeCard.nativeElement;
+
+    try {
+      const canvas = await html2canvas(card);
+      const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const zodiacName = this.horoscopeForm.get('language')?.value === 'zh'
+        ? this.horoscope.zodiac_sign_chinese : this.horoscope.zodiac_sign;
+
+      // Create the download link
+      const link = document.createElement('a');
+      link.download = `${date}_${zodiacName}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (error) {
+      console.error('Error downloading horoscope:', error);
+    }
+  }
+
 }

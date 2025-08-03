@@ -39,13 +39,19 @@
   </div>
 
   <div class="horoscope-result" *ngIf="horoscope">
-    <div class="horoscope-card">
+    <div class="horoscope-card" #horoscopeCard>
+      <button (click)="downloadHoroscope()" class="download-btn" data-tooltip="Download your horoscope card for today">
+        <i class="fas fa-download"></i>
+      </button>
+
       <div class="horoscope-header">
         <h3>{{ horoscope.zodiac_sign }}</h3>
         <p *ngIf="horoscope.zodiac_sign_chinese" class="chinese-sign">{{ horoscope.zodiac_sign_chinese }}</p>
         <p class="date">{{ today | date }}</p>
       </div>
       <div class="horoscope-content">
+        <h2>{{ horoscope.zodiac_sign }}</h2>
+        <h3 *ngIf="horoscope.zodiac_sign_chinese">{{ horoscope.zodiac_sign_chinese }}</h3>
         <p>{{ horoscope.daily_horoscope }}</p>
 
         <div class="horoscope-details" *ngIf="horoscope.lucky_number || horoscope.compatibility || horoscope.mood">
