@@ -1,0 +1,16 @@
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [vue()],
+  server: {
+    hmr: {
+      overlay: false
+    }
+  },
+  preview: {
+    // disable HMR entirely in preview to avoid any overlay
+    hmr: false
+  }
+})
