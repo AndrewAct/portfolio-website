@@ -37,3 +37,21 @@ async def get_horoscope_by_birthdate(
         request.language
     )
     return horoscope
+
+
+@router.post("", response_model=HoroscopeResponse)
+async def get_horoscope_by_birthdate_no_slash(
+    request: BirthdateRequest,
+    service: HoroscopeService = Depends(get_horoscope_service)
+):
+    """Get daily horoscope by birthdate (without trailing slash)"""
+    english_name, localized_name = service.get_zodiac_sign(
+        request.birthdate,
+        request.language
+    )
+    horoscope = await service.get_daily_horoscope(
+        english_name if request.language == "en" else localized_name,
+        request.gender,
+        request.language
+    )
+    return horoscope

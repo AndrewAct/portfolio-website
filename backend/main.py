@@ -44,6 +44,7 @@ if ENV == "development":
 else:  # production
     origins = [
         "https://andrewcee.io",
+        "http://andrewcee.io",  # Allow HTTP for production as well
     ]
 
 # Add CORS middleware
