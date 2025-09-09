@@ -15,10 +15,8 @@ export interface BirthdateRequest {
   language: string
 }
 
-// Use HTTP for local development, HTTPS for production
-const apiBase = import.meta.env.VITE_API_BASE_URL ?? 
-  (import.meta.env.DEV ? 'http://localhost:8000' : 'https://andrewcee.io')
-const baseUrl = `${apiBase}/utilities/horoscope`
+// Use andrewcee.io domain for production, localhost for development
+const baseUrl = import.meta.env.DEV ? 'http://localhost:8000/utilities/horoscope' : 'https://andrewcee.io/utilities/horoscope'
 
 export async function getHoroscopeBySign(sign: string, gender: string, language = 'en') {
   const { data } = await axios.get<HoroscopeResponse>(`${baseUrl}/${sign}`, {
