@@ -13,14 +13,15 @@ services:
     restart: always
 
   frontend:
-    image: apecee/portfolio_website:portfolio_website_frontend_0.0.4
+    image: apecee/portfolio_website:portfolio_website_frontend_v2_latest
     expose:
-      - "4200"
+      - "80"
     restart: always
     depends_on:
       - backend
-#    environment:
-#      - NODE_ENV=production
+    environment:
+      - NODE_ENV=production
+      - VITE_API_BASE_URL=https://andrewcee.io
 
   backend:
     image: apecee/portfolio_website:portfolio_website_backend_0.0.6
