@@ -8,9 +8,5 @@ export default defineConfig({
     hmr: {
       overlay: false
     }
-  },
-  preview: {
-    // disable HMR entirely in preview to avoid any overlay
-    hmr: false
   }
 })

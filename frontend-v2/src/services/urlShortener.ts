@@ -7,7 +7,9 @@ export interface URLResponse {
   created_at: string
 }
 
-const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'https://andrewcee.io'
+// Use HTTP for local development, HTTPS for production
+const apiBase = import.meta.env.VITE_API_BASE_URL ?? 
+  (import.meta.env.DEV ? 'http://localhost:8000' : 'https://andrewcee.io')
 const baseUrl = `${apiBase}/utilities/url_shortener`
 
 export async function createShortUrl(body: URLBase) {

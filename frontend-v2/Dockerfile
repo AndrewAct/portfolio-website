@@ -4,6 +4,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --no-audit --no-fund
 COPY . .
+# Set production API base URL
+ENV VITE_API_BASE_URL=https://andrewcee.io
 RUN npm run build
 
 # --- Run stage ---

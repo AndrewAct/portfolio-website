@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { getHoroscopeByBirthdate, type HoroscopeResponse } from '../services/horoscope'
 import html2canvas from 'html2canvas'
 

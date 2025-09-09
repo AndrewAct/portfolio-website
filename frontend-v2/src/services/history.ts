@@ -10,7 +10,9 @@ export interface MediumPost {
   reading_time: number
 }
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'https://andrewcee.io'
+// Use HTTP for local development, HTTPS for production
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 
+  (import.meta.env.DEV ? 'http://localhost:8000' : 'https://andrewcee.io')
 
 const http: AxiosInstance = axios.create({
   baseURL: `${apiBaseUrl}/api`

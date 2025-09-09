@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { getMediumPosts, type MediumPost } from '../services/history'
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
 const loading = ref(true)
 const error = ref<string | null>(null)
 const mediumPosts = ref<MediumPost[]>([])
