@@ -11,15 +11,19 @@ function navigate(path: string) {
   <div class="home-container">
     <img src="/assets/images/homepage_image.jpg" alt="Background" />
     <div class="button-container">
-      <button @click="navigate('history')" class="tooltip-container">
-        History
-        <span class="tooltip">Feel free to check out my articles on Medium!</span>
+<!--      <button @click="navigate('history')" class="tooltip-container">-->
+<!--        History-->
+<!--        <span class="tooltip">Feel free to check out my articles on Medium!</span>-->
+<!--      </button>-->
+      <button class="tooltip-container">
+        Projects
+        <span class="tooltip">We are building something awesome. Please keep tuned!</span>
       </button>
       <button @click="navigate('utilities')" class="tooltip-container">
         Utilities
         <span class="tooltip">Some utilities you might enjoy. Currently include: URL Shortener and Horoscope. More features will come in soon!</span>
       </button>
-      <a href="https://andrewisgrinding.grafana.net/public-dashboards/c417bb15c3da45f2abefb1dcfd5076fe" target="_blank" class="button tooltip-container">
+      <a href="https://andrewisgrinding.grafana.net/public-dashboards/c417bb15c3da45f2abefb1dcfd5076fe" target="_blank" class="tooltip-container">
         Observability
         <span class="tooltip">Click this button to view the Grafana monitoring dashboard for my website</span>
       </a>
@@ -77,6 +81,7 @@ button, .button {
   padding: 12px 24px;
   font-size: 18px;
   border: 2px solid white;
+  border-radius: 4px;
   background: rgba(0, 0, 0, 0.6);
   color: white;
   cursor: pointer;
@@ -96,6 +101,7 @@ button, .button {
   padding: 12px 24px;
   font-size: 18px;
   border: 2px solid white;
+  border-radius: 4px;
   background: rgba(0, 0, 0, 0.6);
   color: white;
   cursor: pointer;

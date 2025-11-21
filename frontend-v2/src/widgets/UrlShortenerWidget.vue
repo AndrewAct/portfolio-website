@@ -75,6 +75,12 @@ async function removeUrl(item: URLResponse) {
   gap: 1.5rem; 
 }
 
+.url-shortener-container h2 {
+  color: #1a1a1a;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
 .input-container { 
   display: flex; 
   gap: .75rem; 
@@ -83,33 +89,35 @@ async function removeUrl(item: URLResponse) {
 .input-container input { 
   flex: 1; 
   padding: .875rem 1rem; 
-  border: 2px solid #e2e8f0; 
+  border: 2px solid #e0e0e0; 
   border-radius: 8px; 
   font-size: 1rem;
-  transition: border-color 0.3s ease;
+  background: #fafafa;
+  transition: all 0.3s ease;
 }
 
 .input-container input:focus {
   outline: none;
-  border-color: #4263eb;
-  box-shadow: 0 0 0 3px rgba(66, 99, 235, 0.1);
+  border-color: #E8D5B7;
+  box-shadow: 0 0 0 3px rgba(232, 213, 183, 0.15);
+  background: #fff;
 }
 
 .input-container button { 
   padding: .875rem 1.5rem; 
-  background: #4263eb; 
-  color: #fff; 
-  border: none; 
+  background: linear-gradient(135deg, #F5E8D6, #E8D5B7); 
+  color: #4a4a4a; 
+  border: 1px solid #E8D5B7; 
   border-radius: 8px; 
   cursor: pointer; 
-  font-weight: 500;
+  font-weight: 600;
   transition: all 0.3s ease;
 }
 
 .input-container button:hover {
-  background: #3b5bdb;
+  background: linear-gradient(135deg, #E8D5B7, #DDC9B0);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(66, 99, 235, 0.3);
+  box-shadow: 0 4px 12px rgba(232, 213, 183, 0.3);
 }
 
 .input-container button:disabled {
@@ -128,10 +136,10 @@ async function removeUrl(item: URLResponse) {
 }
 
 .result-container { 
-  background: #f8faff; 
+  background: #fafafa; 
   padding: 1.25rem; 
   border-radius: 12px; 
-  border: 1px solid #e2e8f0;
+  border: 1px solid #f0f0f0;
 }
 
 .url-display { 
@@ -147,14 +155,14 @@ async function removeUrl(item: URLResponse) {
 }
 
 .url-display a {
-  color: #4263eb;
+  color: #B8947A;
   text-decoration: none;
   font-weight: 500;
   transition: color 0.3s ease;
 }
 
 .url-display a:hover {
-  color: #3b5bdb;
+  color: #A6856F;
   text-decoration: underline;
 }
 
@@ -163,7 +171,7 @@ async function removeUrl(item: URLResponse) {
 }
 
 .recent-urls h3 {
-  color: #374151;
+  color: #1a1a1a;
   margin-bottom: 1rem;
   font-size: 1.125rem;
   font-weight: 600;
@@ -175,14 +183,15 @@ async function removeUrl(item: URLResponse) {
   gap: 1rem; 
   padding: 1rem; 
   background: #fff; 
-  border: 1px solid #e2e8f0; 
+  border: 1px solid #f0f0f0; 
   border-radius: 10px; 
   margin-top: .75rem;
-  transition: box-shadow 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .url-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(232, 213, 183, 0.15);
+  border-color: #E8D5B7;
 }
 
 .url-details {
@@ -199,14 +208,14 @@ async function removeUrl(item: URLResponse) {
 }
 
 .url-details a {
-  color: #4263eb;
+  color: #B8947A;
   text-decoration: none;
   font-weight: 500;
   transition: color 0.3s ease;
 }
 
 .url-details a:hover {
-  color: #3b5bdb;
+  color: #A6856F;
   text-decoration: underline;
 }
 
@@ -217,8 +226,8 @@ async function removeUrl(item: URLResponse) {
 }
 
 .url-actions button { 
-  background: #f1f5f9; 
-  border: 1px solid #e2e8f0; 
+  background: #fafafa; 
+  border: 1px solid #e0e0e0; 
   padding: .5rem .875rem; 
   border-radius: 6px; 
   cursor: pointer; 
@@ -230,19 +239,20 @@ async function removeUrl(item: URLResponse) {
 }
 
 .url-actions button:hover {
-  background: #e2e8f0;
+  background: #f0f0f0;
   transform: translateY(-1px);
 }
 
 .copy-btn {
-  background: #10b981 !important;
-  color: #fff !important;
-  border-color: #10b981 !important;
+  background: linear-gradient(135deg, #F5E8D6, #E8D5B7) !important;
+  color: #4a4a4a !important;
+  border-color: #E8D5B7 !important;
+  font-weight: 600 !important;
 }
 
 .copy-btn:hover {
-  background: #059669 !important;
-  border-color: #059669 !important;
+  background: linear-gradient(135deg, #E8D5B7, #DDC9B0) !important;
+  border-color: #DDC9B0 !important;
 }
 
 .delete-btn { 
