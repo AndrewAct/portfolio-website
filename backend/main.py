@@ -35,15 +35,16 @@ ENV = os.getenv("ENV", "development")
 
 if ENV == "development":
     origins = [
-        "http://localhost:4200",  # Angular dev server
-        "http://localhost:80",    # Docker frontend port
+        "http://localhost:5173",  # Vue dev server
+        "https://localhost:80",    # Docker frontend port
         "http://127.0.0.1:4200",
+        "http://127.0.0.1:5173",  # Vue dev server
         "http://127.0.0.1:80",
     ]
 else:  # production
     origins = [
         "https://andrewcee.io",
-        "http://andrewcee.io",
+        "http://andrewcee.io",  # Allow HTTP for production as well
     ]
 
 # Add CORS middleware

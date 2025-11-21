@@ -1,0 +1,11 @@
+version: "3.8"
+services:
+  frontend:
+    build: .
+    image: portfolio-frontend-v2:latest
+    ports:
+      - "8080:80"
+    environment:
+      - NODE_ENV=production
+      - VITE_API_BASE_URL=https://andrewcee.io
+    restart: unless-stopped
