@@ -50,25 +50,27 @@ class HoroscopeService:
         return english_name, localized_name
 
     async def get_daily_horoscope(self, zodiac_sign: str, gender: str, language: str = "en") -> Dict[str, Any]:
-        """Generate a daily horoscope using DeepSeek API."""
+        """Generate a daily horoscope using OpenAI API."""
         try:
-            # Create prompt for DeepSeek based on language
+            # Create prompt for OpenAI based on language
             prompt = self._prompt_generator(language, zodiac_sign, gender)
 
             if self.api_key:
                 try:
-                    input_text = prompt
-                    response = self.client.responses.create(
-                        model="gpt-3.5-turbo",
-                        input=input_text,
+                    response = self.client.chat.completions.create(
+                        model="gpt-4o",
+                        messages=[
+                            {"role": "user", "content": prompt}
+                        ],
+                        temperature=0.7,
                     )
 
-                    if hasattr(response, 'output') and len(response.output) > 0:
-                        # The output format referred to official doc:
-                        # https://platform.openai.com/docs/api-reference/responses/create
-                        horoscope_text = response.output[0].content[0].text
+                    if hasattr(response, 'choices') and len(response.choices) > 0:
+                        # Standard OpenAI Chat Completions API response format:
+                        # https://platform.openai.com/docs/api-reference/chat/create
+                        horoscope_text = response.choices[0].message.content
 
-                        # Process potential Markdown output from Deepseek
+                        # Process potential Markdown output from OpenAI
                         if "```json" in horoscope_text:
                             # Extract JSON
                             json_start = horoscope_text.find('{')
@@ -109,7 +111,7 @@ class HoroscopeService:
                             except:
                                 return self._generate_fallback_horoscope(zodiac_sign, language)
                     else:
-                        self.logger.error("Response does not have choice field as expected")
+                        self.logger.error("Response does not have choices field as expected")
                         return self._generate_fallback_horoscope(zodiac_sign, language)
 
                 except Exception as api_error:
