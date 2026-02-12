@@ -3,6 +3,7 @@
 *.env
 *.pyc
 *.pyo
+*venv
 __pycache__/
 *.bkp
 frontend_memo.md
