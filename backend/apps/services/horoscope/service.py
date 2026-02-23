@@ -5,7 +5,8 @@ import random
 import re
 from datetime import date
 from typing import Tuple, Dict, Any
-from openai import OpenAI
+from google import genai
+from google.genai import types
 
 from ...core.logger import setup_logging
 # logger = setup_logging("Horoscope")
@@ -15,15 +16,14 @@ settings = get_settings()
 
 class HoroscopeService:
     def __init__(self):
-        # self.api_key = settings.deepseek_api_key
-        self.api_key = settings.openai_api_key
-        # self.client = OpenAI(
-        #     api_key=self.api_key,
-        #     base_url="https://api.deepseek.com"
-        # )
-        self.client = OpenAI(
-            api_key=self.api_key
-        )
+        self.api_key = settings.gemini_api_key
+        if self.api_key:
+            self.client = genai.Client(api_key=self.api_key)
+        else:
+            self.client = None
+        # Use gemini-3-flash-preview - fastest model available (218 tokens/sec)
+        # No fallback models to avoid multiple API calls
+        self.model_name = "gemini-3-flash-preview"
         self.zodiac_names = {
             "en": ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
                    "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"],
@@ -31,6 +31,18 @@ class HoroscopeService:
                    "天秤座", "天蝎座", "射手座", "摩羯座", "水瓶座", "双鱼座"]
         }
         self.logger = setup_logging("Horoscope")
+
+    def _list_available_models(self):
+        """List available models for debugging"""
+        if not self.api_key or not self.client:
+            return []
+        try:
+            # Try to list models (if API supports it)
+            models = self.client.models.list()
+            return [model.name for model in models] if hasattr(models, '__iter__') else []
+        except Exception as e:
+            self.logger.warning(f"Could not list models: {str(e)}")
+            return []
 
     def get_zodiac_sign(self, birthdate: date, language: str = "en") -> Tuple[str, str]:
         """Determine zodiac sign based on birthdate."""
@@ -50,68 +62,70 @@ class HoroscopeService:
         return english_name, localized_name
 
     async def get_daily_horoscope(self, zodiac_sign: str, gender: str, language: str = "en") -> Dict[str, Any]:
-        """Generate a daily horoscope using OpenAI API."""
+        """Generate a daily horoscope using Gemini API."""
         try:
-            # Create prompt for OpenAI based on language
+            # Create prompt for Gemini based on language
             prompt = self._prompt_generator(language, zodiac_sign, gender)
 
-            if self.api_key:
+            if self.api_key and self.client:
                 try:
-                    response = self.client.chat.completions.create(
-                        model="gpt-4o",
-                        messages=[
-                            {"role": "user", "content": prompt}
-                        ],
-                        temperature=0.7,
+                    # Direct call to fastest model
+                    response = self.client.models.generate_content(
+                        model=self.model_name,
+                        contents=types.Part.from_text(text=prompt),
+                        config=types.GenerateContentConfig(
+                            temperature=0.7,  # Lower for faster responses
+                            top_p=0.9,
+                            top_k=20,
+                        )
                     )
 
-                    if hasattr(response, 'choices') and len(response.choices) > 0:
-                        # Standard OpenAI Chat Completions API response format:
-                        # https://platform.openai.com/docs/api-reference/chat/create
-                        horoscope_text = response.choices[0].message.content
-
-                        # Process potential Markdown output from OpenAI
-                        if "```json" in horoscope_text:
-                            # Extract JSON
-                            json_start = horoscope_text.find('{')
-                            json_end = horoscope_text.rfind('}') + 1
-                            if 0 <= json_start < json_end:
-                                horoscope_text = horoscope_text[json_start:json_end]
-
-                        try:
-                            horoscope_data = json.loads(horoscope_text)
-                            # logging.info(f"Got horoscope data: {horoscope_data}")
-                            horoscope_data["zodiac_sign"] = zodiac_sign
-
-                            if language == "zh" and zodiac_sign in self.zodiac_names["zh"]:
-                                horoscope_data["zodiac_sign_chinese"] = zodiac_sign
-                                if zodiac_sign in self.zodiac_names["zh"]:
-                                    index = self.zodiac_names["zh"].index(zodiac_sign)
-                                    horoscope_data["zodiac_sign"] = self.zodiac_names["en"][index]
-                            elif zodiac_sign in self.zodiac_names["en"]:
-                                index = self.zodiac_names["en"].index(zodiac_sign)
-                                horoscope_data["zodiac_sign_chinese"] = self.zodiac_names["zh"][index]
-
-                            return horoscope_data
-                        except json.JSONDecodeError as json_error:
-                            self.logger.error(f"Failed to parse JSON content: {str(json_error)}")
-                            try:
-                                cleaned_text = re.sub(r'[^\x00-\x7F]+', ' ', horoscope_text)
-                                cleaned_text = cleaned_text.replace('\n', ' ').replace('\\', '\\\\')
-                                horoscope_data = json.loads(cleaned_text)
-
-                                horoscope_data["zodiac_sign"] = zodiac_sign
-                                if language == "zh" and zodiac_sign in self.zodiac_names["zh"]:
-                                    pass
-                                elif zodiac_sign in self.zodiac_names["en"]:
-                                    index = self.zodiac_names["en"].index(zodiac_sign)
-                                    horoscope_data["zodiac_sign_chinese"] = self.zodiac_names["zh"][index]
-
-                                return horoscope_data
-                            except:
-                                return self._generate_fallback_horoscope(zodiac_sign, language)
+                    # Gemini API response handling
+                    if response and hasattr(response, 'text') and response.text:
+                        horoscope_text = response.text.strip()
                     else:
-                        self.logger.error("Response does not have choices field as expected")
+                        self.logger.error("No text content in Gemini response")
+                        return self._generate_fallback_horoscope(zodiac_sign, language)
+
+                    # Process potential Markdown output from Gemini
+                    if "```json" in horoscope_text:
+                        # Extract JSON
+                        json_start = horoscope_text.find('{')
+                        json_end = horoscope_text.rfind('}') + 1
+                        if 0 <= json_start < json_end:
+                            horoscope_text = horoscope_text[json_start:json_end]
+                    elif "```" in horoscope_text:
+                        # Remove markdown code blocks
+                        horoscope_text = re.sub(r'```json\s*', '', horoscope_text)
+                        horoscope_text = re.sub(r'```\s*', '', horoscope_text)
+
+                    try:
+                        horoscope_data = json.loads(horoscope_text)
+                        horoscope_data["zodiac_sign"] = zodiac_sign
+
+                        if language == "zh" and zodiac_sign in self.zodiac_names["zh"]:
+                            horoscope_data["zodiac_sign_chinese"] = zodiac_sign
+                            if zodiac_sign in self.zodiac_names["zh"]:
+                                index = self.zodiac_names["zh"].index(zodiac_sign)
+                                horoscope_data["zodiac_sign"] = self.zodiac_names["en"][index]
+                        elif zodiac_sign in self.zodiac_names["en"]:
+                            index = self.zodiac_names["en"].index(zodiac_sign)
+                            horoscope_data["zodiac_sign_chinese"] = self.zodiac_names["zh"][index]
+
+                        # Ensure all required fields exist
+                        if "lucky_number" not in horoscope_data:
+                            horoscope_data["lucky_number"] = random.randint(1, 100)
+                        if "compatibility" not in horoscope_data:
+                            compatible_index = random.choice([i for i in range(12) if self.zodiac_names["en"][i] != horoscope_data["zodiac_sign"]])
+                            horoscope_data["compatibility"] = self.zodiac_names[language][compatible_index] if language == "zh" else self.zodiac_names["en"][compatible_index]
+                        if "mood" not in horoscope_data:
+                            moods = {"en": ["Happy", "Reflective", "Energetic", "Calm"], "zh": ["开心", "沉思", "精力充沛", "平静"]}
+                            horoscope_data["mood"] = random.choice(moods.get(language, moods["en"]))
+
+                        return horoscope_data
+                    except json.JSONDecodeError as json_error:
+                        self.logger.error(f"Failed to parse JSON content: {str(json_error)}")
+                        self.logger.error(f"Raw response: {horoscope_text[:500]}")
                         return self._generate_fallback_horoscope(zodiac_sign, language)
 
                 except Exception as api_error:
@@ -209,35 +223,43 @@ class HoroscopeService:
     @staticmethod
     def _prompt_generator(language: str, zodiac_sign: str, gender: str):
         if language == "zh":
-            prompt = f"""
-            为一位{gender}的{zodiac_sign}生成今日运势预测。
-            包括他们今天的整体运势，一个1到100之间的幸运数字，
-            今天最相配的星座，以及一个描述心情的词。
-            请使用以下JSON格式回复：
-            {{
-                "daily_horoscope": "详细的运势预测文本（150-200字）",
-                "lucky_number": 幸运数字（整数）,
-                "compatibility": "相配的星座",
-                "mood": "心情描述"
-            }}
-            使运势预测详细、有洞察力，积极但也要实际。
-            请直接返回JSON，不要包含任何额外的标记或文本。
-            """
+            prompt = f"""你是一位专业的占星师，为一位{gender}的{zodiac_sign}生成今日运势预测。
+
+要求：
+1. 运势预测必须详细、个性化，避免使用通用模板或重复的表述
+2. 结合{zodiac_sign}的性格特点和今日的特殊性，提供独特的见解
+3. 内容要积极正面，但也要真实可信，不要过于夸张
+4. 避免使用"你会感到有活力"、"今天是个好日子"等过于常见的表述
+5. 运势文本长度应在100-150字之间
+
+请严格按照以下JSON格式返回，不要包含任何其他文字或标记：
+{{
+    "daily_horoscope": "详细的运势预测文本（100-150字，要具体、个性化、避免重复）",
+    "lucky_number": 幸运数字（1-100之间的整数）,
+    "compatibility": "相配的星座（中文名称）",
+    "mood": "心情描述（一个词或短语）"
+}}
+
+重要：直接返回纯JSON，不要使用markdown代码块，不要添加任何解释文字。"""
         else:
-            prompt = f"""
-            Generate a daily horoscope for a {gender} who is a {zodiac_sign}.
-            Include their overall forecast for today, a lucky number between 1 and 100,
-            a compatible zodiac sign for today, and a mood descriptor.
-            Format the response as JSON with the following structure:
-            {{
-                "daily_horoscope": "detailed horoscope text (150-200 words)",
-                "lucky_number": lucky_number_as_integer,
-                "compatibility": "compatible zodiac sign",
-                "mood": "mood descriptor"
-            }}
-            Make the horoscope detailed, insightful, and positive but realistic.
-            Return ONLY the JSON without any markdown formatting or additional text.
-            """
+            prompt = f"""You are a professional astrologer generating a daily horoscope for a {gender} who is a {zodiac_sign}.
+
+Requirements:
+1. The horoscope must be detailed and personalized, avoiding generic templates or repetitive phrases
+2. Combine the {zodiac_sign} personality traits with today's unique aspects to provide distinctive insights
+3. Content should be positive but realistic and believable, not overly exaggerated
+4. Avoid common phrases like "You will feel energetic" or "Today is a good day"
+5. The horoscope text should be 100-150 words
+
+Return ONLY valid JSON in this exact format, without any markdown formatting or additional text:
+{{
+    "daily_horoscope": "detailed horoscope text (100-150 words, be specific, personalized, avoid repetition)",
+    "lucky_number": lucky_number_as_integer (between 1-100),
+    "compatibility": "compatible zodiac sign (English name)",
+    "mood": "mood descriptor (single word or phrase)"
+}}
+
+Important: Return pure JSON only, no markdown code blocks, no explanatory text."""
 
         return prompt
 

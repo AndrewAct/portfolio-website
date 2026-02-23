@@ -19,10 +19,12 @@ settings = get_settings()
 logger = setup_logging("OTLP Prometheus")
 
 # Create desired metrics
+# Reduced label cardinality: removed 'status' label to reduce series count
+# Status codes can be tracked separately if needed, or grouped (2xx, 4xx, 5xx)
 http_requests_total = Counter(
     'http_requests_total',
     'Total HTTP Requests',
-    ['method', 'endpoint', 'status']
+    ['method', 'endpoint']  # Removed 'status' label to reduce cardinality
 )
 
 # http_request_duration_seconds = Histogram(
@@ -108,6 +110,11 @@ class MetricsExporter:
         logger.info("We are preparing to send metrics...")
         try:
             for family in text_string_to_metric_families(metrics_text):
+                # Skip _created metrics to reduce cardinality
+                # These are auto-generated timestamp metrics from Prometheus Counters
+                if family.name.endswith("_created") or "_created_ratio" in family.name:
+                    continue
+                
                 metric_type = family.type
                 if metric_type in ["counter", "gauge", "histogram"]:
                     metric = self.get_or_create_metric(
@@ -117,6 +124,10 @@ class MetricsExporter:
                     )
 
                     for sample in family.samples:
+                        # Skip _created and _sum, _count samples for histograms
+                        if sample.name.endswith("_created") or "_created_ratio" in sample.name:
+                            continue
+                            
                         if metric_type == "counter":
                             metric.add(sample.value, sample.labels)
                         elif metric_type == "gauge":
@@ -214,10 +225,10 @@ def track_metrics(method: str, endpoint: str, status_code: int, duration: float)
     """Track metrics from middleware"""
     try:
         # Update prometheus metrics
+        # Removed status_code label to reduce cardinality
         http_requests_total.labels(
             method=method,
-            endpoint=endpoint,
-            status=str(status_code)
+            endpoint=endpoint
         ).inc()
 
         # http_request_duration_seconds.labels(
