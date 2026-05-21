@@ -15,9 +15,9 @@ function navigate(path: string) {
 <!--        History-->
 <!--        <span class="tooltip">Feel free to check out my articles on Medium!</span>-->
 <!--      </button>-->
-      <button class="tooltip-container">
+      <button @click="navigate('projects')" class="tooltip-container">
         Projects
-        <span class="tooltip">We are building something awesome. Please keep tuned!</span>
+        <span class="tooltip">Check out what I've been building!</span>
       </button>
       <button @click="navigate('utilities')" class="tooltip-container">
         Utilities
@@ -38,6 +38,9 @@ function navigate(path: string) {
       </a>
       <a href="https://andrewact.medium.com/" target="_blank" class="social-button">
         <img src="/assets/images/medium.svg" alt="Medium">
+      </a>
+      <a href="https://github.com/AndrewAct" target="_blank" class="social-button">
+        <img src="/assets/images/github_icon.svg" alt="GitHub">
       </a>
     </div>
   </div>

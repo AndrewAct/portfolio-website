@@ -1,18 +1,18 @@
 # Portfolio Website of Andrew Chen 
 
-v0.0.1 
+v0.1.0 
 
 * Homepage
 
 ![image info](./images/homepage.png)
 
-* Medium Articles 
+* Utilities
 
-![image info](./images/medium_posts.png)
+![image info](./images/utilities_page_May_2026.png)
 
-* URL Shortener
+* Projects 
 
-![image info](./images/url_shortener.png)
+![image info](./images/projects_page_May_2026.png)
 
 ### Memo 
 
@@ -28,8 +28,8 @@ However, this violates "DRY" principle.
 I didn't find a better solution yet, so will stick with method for now.
 
 ### Roadmap
-- [ ] New feature: weather report
-- [ ] Refactor: microservices (expected by June 22, 2025)
+- [x] New feature: Project (TickSense.ai) (May 21, 2026)
+- [x] Refactor frontend for better aesthetic (May 21, 2026)
 - [x] New feature: Horoscope
 - [x] Frontend: Support URL Shortener functionality 
 - [x] Deploy on AWS Elastic Lightsail
