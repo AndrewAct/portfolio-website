@@ -25,3 +25,9 @@ cache_clean_solution.md
 *otlp_and_tempo.md
 *otlp_prom_structure.md
 *prometheus_metrics_tbd.md
+
+#.idea files
+/backend/.idea
+
+# venv
+/backend/venv

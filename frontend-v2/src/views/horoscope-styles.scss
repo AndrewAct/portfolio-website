@@ -1,149 +1,255 @@
+/* Horoscope widget — dark/glass background context */
+
 .horoscope-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2rem;
-  max-width: 800px;
+  gap: 1.5rem;
+  max-width: 560px;
   margin: 0 auto;
 }
 
-.download-btn {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  background: linear-gradient(135deg, #F5E8D6, #E8D5B7);
-  color: #4a4a4a;
-  border: 1px solid #E8D5B7;
-  border-radius: 8px;
-  padding: 10px 12px;
-  cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  z-index: 10;
-  min-width: 40px;
-  height: 40px;
-  font-weight: 500;
+/* ── Form card ──────────────────────────────────── */
+.horoscope-form-card {
+  width: 100%;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
 
-  &:hover {
-    background: linear-gradient(135deg, #E8D5B7, #DDC9B0);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(232, 213, 183, 0.3);
+  h2 {
+    color: rgba(255, 255, 255, 0.92);
+    margin: 0 0 0.35rem;
+    text-align: center;
+    font-weight: 600;
+    font-size: 1.2rem;
   }
 
-  i { font-size: 16px; }
+  .subtitle {
+    color: rgba(255, 255, 255, 0.5);
+    text-align: center;
+    margin: 0 0 1.75rem;
+    font-size: 0.9rem;
+  }
 }
 
-.horoscope-form-card {
-  background-color: #fff;
-  border-radius: 10px;
-  border: 1px solid #f0f0f0;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
-  padding: 2rem;
-  width: 100%;
-  max-width: 500px;
-  margin-bottom: 2rem;
-
-  h2 { color: #1a1a1a; margin-bottom: 0.5rem; text-align: center; font-weight: 600; }
-  .subtitle { color: #666; text-align: center; margin-bottom: 2rem; }
-}
-
+/* ── Form groups ────────────────────────────────── */
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.2rem;
 
-  label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #333; }
+  label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.88rem;
+  }
 
   .form-control {
     width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #e0e0e0;
-    border-radius: 5px;
-    font-size: 1rem;
-    transition: all 0.3s;
-    background: #fafafa;
+    padding: 0.72rem 0.9rem;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.88);
+    -webkit-appearance: none;
+    appearance: none;
+    box-sizing: border-box;
 
     &:focus {
       outline: none;
-      border-color: #E8D5B7;
-      box-shadow: 0 0 0 3px rgba(232, 213, 183, 0.15);
-      background: #fff;
+      border-color: rgba(255, 255, 255, 0.42);
+      background: rgba(255, 255, 255, 0.12);
+      box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.07);
     }
+
+    /* Date input calendar icon color */
+    &[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(1) opacity(0.6);
+      cursor: pointer;
+    }
+
+    option {
+      background: #1e1e2e;
+      color: rgba(255, 255, 255, 0.9);
+    }
+  }
+
+  select.form-control {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 2.5rem;
   }
 }
 
+/* ── Submit button ──────────────────────────────── */
 .submit-btn {
   width: 100%;
-  padding: 0.75rem;
-  background: linear-gradient(135deg, #F5E8D6, #E8D5B7);
-  color: #4a4a4a;
-  border: 1px solid #E8D5B7;
-  border-radius: 5px;
-  font-size: 1rem;
+  padding: 0.78rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: #111;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: background 0.18s, box-shadow 0.18s, transform 0.18s;
 
-  &:hover { 
-    background: linear-gradient(135deg, #E8D5B7, #DDC9B0);
+  &:hover:not(:disabled) {
+    background: #fff;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(232, 213, 183, 0.3);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   }
-  &:disabled { 
-    background: #e0e0e0; 
-    border-color: #e0e0e0;
-    color: #999;
+
+  &:disabled {
+    background: rgba(255, 255, 255, 0.22);
+    color: rgba(255, 255, 255, 0.4);
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
   }
 }
 
+/* ── Download button ────────────────────────────── */
+.download-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #f3f3f0;
+  border: 1px solid #e0ddd8;
+  border-radius: 8px;
+  padding: 0;
+  cursor: pointer;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.18s, transform 0.18s;
+  z-index: 10;
+  width: 36px;
+  height: 36px;
+  color: #555;
+
+  &:hover {
+    background: #e8e5e0;
+    transform: translateY(-1px);
+  }
+}
+
+/* ── Result card ────────────────────────────────── */
 .horoscope-result {
-  .horoscope-card {
-    position: relative;
-    background: white;
-    border: 1px solid #f0f0f0;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-    margin: 20px 0;
+  width: 100%;
+}
+
+.horoscope-card {
+  position: relative;
+  background: #fffdf8;
+  border: 1px solid #e8e2d8;
+  border-radius: 16px;
+  padding: 2rem 2rem 1.6rem;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.05),
+    0 12px 28px rgba(0, 0, 0, 0.09);
+  overflow: hidden;
+
+  /* Subtle warm top accent line */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #c9a96e, #e8c99a, #c9a96e);
   }
 }
 
 .horoscope-header {
-  margin-bottom: 20px;
   text-align: center;
+  padding: 0.5rem 2.5rem 1.4rem;
+  border-bottom: 1px solid #ede8e0;
+  margin-bottom: 1.4rem;
 
-  h3 { margin: 0 0 8px 0; color: #1a1a1a; font-size: 24px; font-weight: 600; }
-  .chinese-sign { margin: 0 0 8px 0; color: #666; font-size: 16px; }
-  .date { margin: 0; color: #888; font-size: 14px; }
+  h3 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 2.4rem;
+    font-weight: 700;
+    font-style: italic;
+    color: #1a1612;
+    margin: 0 0 0.2rem;
+    letter-spacing: 0.02em;
+    line-height: 1.05;
+  }
+
+  .chinese-sign {
+    margin: 0 0 0.5rem;
+    color: #8a7a68;
+    font-size: 0.92rem;
+    letter-spacing: 0.08em;
+  }
+
+  .date {
+    margin: 0;
+    color: #b0a090;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
 }
 
 .horoscope-content {
-  h2 { margin: 0 0 8px 0; color: #1a1a1a; font-weight: 600; }
-  h3 { margin: 0 0 16px 0; color: #666; font-weight: normal; }
-  p { line-height: 1.6; color: #555; margin-bottom: 16px; }
+  /* The template renders h2 + h3 as duplicates of the header — hide them */
+  h2, h3 { display: none; }
+
+  p {
+    line-height: 1.78;
+    color: #3d3228;
+    margin: 0 0 1rem;
+    font-size: 0.95rem;
+  }
 }
 
 .horoscope-details {
-  border-top: 1px solid #eee;
-  padding-top: 16px;
-  margin-top: 20px;
+  display: flex;
+  gap: 0.4rem 1.5rem;
+  flex-wrap: wrap;
+  border-top: 1px solid #ede8e0;
+  padding-top: 1rem;
+  margin-top: 0.5rem;
 
-  p { margin: 8px 0; color: #666; font-size: 14px; }
+  p {
+    margin: 0;
+    color: #8a7a68;
+    font-size: 0.82rem;
+    letter-spacing: 0.02em;
+  }
 }
 
-.error-container { max-width: 500px; margin-top: 1rem; }
-.error-message { 
-  background-color: #fef2f2; 
-  color: #dc2626; 
-  padding: 1rem; 
-  border-radius: 5px; 
-  border: 1px solid #fecaca;
-  text-align: center; 
+/* ── Error ──────────────────────────────────────── */
+.error-container { width: 100%; }
+.error-message {
+  background: rgba(220, 38, 38, 0.15);
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  color: #fca5a5;
+  padding: 0.9rem 1rem;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 0.9rem;
 }
 
-.loading-spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: white; animation: spin 1s ease-in-out infinite; }
+/* ── Loading spinner ────────────────────────────── */
+.loading-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+  border-top-color: #111;
+  animation: spin 0.8s linear infinite;
+}
+
 @keyframes spin { to { transform: rotate(360deg); } }
