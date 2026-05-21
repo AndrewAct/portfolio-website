@@ -69,200 +69,202 @@ async function removeUrl(item: URLResponse) {
 </template>
 
 <style scoped>
-.url-shortener-container { 
-  display: flex; 
-  flex-direction: column; 
-  gap: 1.5rem; 
+/* URL Shortener widget — dark/glass background context */
+
+.url-shortener-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  max-width: 560px;
+  margin: 0 auto;
 }
 
 .url-shortener-container h2 {
-  color: #1a1a1a;
+  color: rgba(255, 255, 255, 0.92);
   font-weight: 600;
-  margin-bottom: 0.5rem;
+  font-size: 1.2rem;
+  margin: 0 0 0.25rem;
 }
 
-.input-container { 
-  display: flex; 
-  gap: .75rem; 
+.input-container {
+  display: flex;
+  gap: 0.6rem;
 }
 
-.input-container input { 
-  flex: 1; 
-  padding: .875rem 1rem; 
-  border: 2px solid #e0e0e0; 
-  border-radius: 8px; 
-  font-size: 1rem;
-  background: #fafafa;
-  transition: all 0.3s ease;
+.input-container input {
+  flex: 1;
+  padding: 0.78rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.88);
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
 }
+
+.input-container input::placeholder { color: rgba(255, 255, 255, 0.35); }
 
 .input-container input:focus {
   outline: none;
-  border-color: #E8D5B7;
-  box-shadow: 0 0 0 3px rgba(232, 213, 183, 0.15);
-  background: #fff;
+  border-color: rgba(255, 255, 255, 0.42);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.07);
 }
 
-.input-container button { 
-  padding: .875rem 1.5rem; 
-  background: linear-gradient(135deg, #F5E8D6, #E8D5B7); 
-  color: #4a4a4a; 
-  border: 1px solid #E8D5B7; 
-  border-radius: 8px; 
-  cursor: pointer; 
+.input-container button {
+  padding: 0.78rem 1.4rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: #111;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
   font-weight: 600;
-  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  transition: background 0.18s, box-shadow 0.18s, transform 0.18s;
+  white-space: nowrap;
 }
 
-.input-container button:hover {
-  background: linear-gradient(135deg, #E8D5B7, #DDC9B0);
+.input-container button:hover:not(:disabled) {
+  background: #fff;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(232, 213, 183, 0.3);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
 }
 
 .input-container button:disabled {
-  background: #94a3b8;
+  background: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.35);
   cursor: not-allowed;
   transform: none;
-  box-shadow: none;
 }
 
-.error-message { 
-  color: #dc2626; 
-  background: #fef2f2; 
-  padding: .875rem 1rem; 
-  border-radius: 8px; 
-  border: 1px solid #fecaca;
+.error-message {
+  background: rgba(220, 38, 38, 0.14);
+  border: 1px solid rgba(220, 38, 38, 0.32);
+  color: #fca5a5;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
 }
 
-.result-container { 
-  background: #fafafa; 
-  padding: 1.25rem; 
-  border-radius: 12px; 
-  border: 1px solid #f0f0f0;
+.result-container {
+  background: rgba(255, 255, 255, 0.07);
+  padding: 1.1rem 1.2rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
 }
 
-.url-display { 
-  display: flex; 
-  gap: .75rem; 
-  align-items: center; 
-  flex-wrap: wrap; 
+.url-display {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .url-display span {
   font-weight: 500;
-  color: #374151;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.88rem;
 }
 
 .url-display a {
-  color: #B8947A;
+  color: rgba(180, 210, 255, 0.85);
   text-decoration: none;
   font-weight: 500;
-  transition: color 0.3s ease;
+  font-size: 0.9rem;
+  transition: color 0.2s;
 }
 
-.url-display a:hover {
-  color: #A6856F;
-  text-decoration: underline;
-}
+.url-display a:hover { color: rgba(180, 210, 255, 1); text-decoration: underline; }
 
-.recent-urls { 
-  margin-top: 1.5rem; 
-}
+.recent-urls { margin-top: 0.5rem; }
 
 .recent-urls h3 {
-  color: #1a1a1a;
-  margin-bottom: 1rem;
-  font-size: 1.125rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
   font-weight: 600;
 }
 
-.url-item { 
-  display: flex; 
-  justify-content: space-between; 
-  gap: 1rem; 
-  padding: 1rem; 
-  background: #fff; 
-  border: 1px solid #f0f0f0; 
-  border-radius: 10px; 
-  margin-top: .75rem;
-  transition: all 0.3s ease;
+.url-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.85rem 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 8px;
+  margin-top: 0.55rem;
+  transition: border-color 0.2s, background 0.2s;
 }
 
 .url-item:hover {
-  box-shadow: 0 2px 8px rgba(232, 213, 183, 0.15);
-  border-color: #E8D5B7;
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .url-details {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: .5rem;
+  gap: 0.3rem;
+  min-width: 0;
 }
 
 .original-url {
-  color: #6b7280;
-  font-size: .875rem;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.82rem;
   word-break: break-all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .url-details a {
-  color: #B8947A;
+  color: rgba(180, 210, 255, 0.85);
   text-decoration: none;
   font-weight: 500;
-  transition: color 0.3s ease;
+  font-size: 0.88rem;
+  transition: color 0.2s;
 }
 
-.url-details a:hover {
-  color: #A6856F;
-  text-decoration: underline;
+.url-details a:hover { color: rgba(180, 210, 255, 1); }
+
+.url-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex-shrink: 0;
 }
 
-.url-actions { 
-  display: flex; 
-  flex-direction: column; 
-  gap: .5rem; 
-}
-
-.url-actions button { 
-  background: #fafafa; 
-  border: 1px solid #e0e0e0; 
-  padding: .5rem .875rem; 
-  border-radius: 6px; 
-  cursor: pointer; 
-  font-size: .875rem;
+.url-actions button {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  padding: 0.42rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.82rem;
   font-weight: 500;
-  color: #475569;
-  transition: all 0.3s ease;
-  min-width: 70px;
+  color: rgba(255, 255, 255, 0.7);
+  transition: background 0.18s, color 0.18s;
+  min-width: 64px;
 }
 
-.url-actions button:hover {
-  background: #f0f0f0;
-  transform: translateY(-1px);
-}
+.url-actions button:hover { background: rgba(255, 255, 255, 0.14); color: #fff; }
 
 .copy-btn {
-  background: linear-gradient(135deg, #F5E8D6, #E8D5B7) !important;
-  color: #4a4a4a !important;
-  border-color: #E8D5B7 !important;
+  background: rgba(255, 255, 255, 0.14) !important;
+  border-color: rgba(255, 255, 255, 0.26) !important;
+  color: rgba(255, 255, 255, 0.88) !important;
   font-weight: 600 !important;
 }
 
-.copy-btn:hover {
-  background: linear-gradient(135deg, #E8D5B7, #DDC9B0) !important;
-  border-color: #DDC9B0 !important;
+.copy-btn:hover { background: rgba(255, 255, 255, 0.22) !important; }
+
+.delete-btn {
+  background: rgba(220, 38, 38, 0.12) !important;
+  border-color: rgba(220, 38, 38, 0.28) !important;
+  color: #fca5a5 !important;
 }
 
-.delete-btn { 
-  background: #fef2f2 !important; 
-  color: #dc2626 !important; 
-  border-color: #fecaca !important;
-}
-
-.delete-btn:hover {
-  background: #fee2e2 !important;
-  border-color: #fca5a5 !important;
-}
+.delete-btn:hover { background: rgba(220, 38, 38, 0.2) !important; }
 </style>
