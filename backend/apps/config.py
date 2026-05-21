@@ -13,9 +13,10 @@ class Settings(BaseSettings):
     grafana_api_key: str
     grafana_otlp_endpoint: str
 
-    # Add variables for DeepSeek API key, OpenAI API KEY 
+    # Add variables for DeepSeek API key, OpenAI API KEY, Gemini API KEY
     deepseek_api_key: str = ""
     openai_api_key: str = ""
+    gemini_api_key: str = ""
 
     model_config = SettingsConfigDict(
         env_file='.env',

@@ -21,5 +21,10 @@
     "typescript": "~5.8.3",
     "vite": "^7.1.2",
     "vue-tsc": "^3.0.5"
-  }
+  },
+  "description": "This is the Vue 3 + TypeScript rewrite of the portfolio frontend. Built with Vite, served by Nginx in Docker.",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
