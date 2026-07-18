@@ -1,12 +1,14 @@
 import base64
+
+from fastapi import FastAPI
 from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.sdk.resources import Resource
-from fastapi import FastAPI
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
 from ..config import get_settings
 from ..core.logger import setup_logging
 
@@ -27,11 +29,13 @@ def setup_telemetry(app: FastAPI):
     encoded_credentials = base64.b64encode(credentials.encode()).decode()
 
     # Create resource with service information
-    resource = Resource.create({
-        "service.name": "fastapi-monitor",
-        "service.version": "0.0.1",
-        "deployment.environment": settings.environment  # TBD: do we really need it?
-    })
+    resource = Resource.create(
+        {
+            "service.name": "fastapi-monitor",
+            "service.version": "0.0.1",
+            "deployment.environment": settings.environment,  # TBD: do we really need it?
+        }
+    )
 
     # Initialize tracer with resource
     logger.info("Setting up the OTLP provider for traces")
@@ -43,8 +47,8 @@ def setup_telemetry(app: FastAPI):
         endpoint=f"{settings.grafana_otlp_endpoint}/v1/traces",  # Traces will end with /v1/traces
         headers={
             "Authorization": f"Basic {encoded_credentials}",
-            "Content-Type": "application/x-protobuf"
-        }
+            "Content-Type": "application/x-protobuf",
+        },
     )
 
     # Add BatchSpanProcessor to the trace provider

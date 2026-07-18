@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   nginx:
     image: nginx:alpine
@@ -13,7 +11,7 @@ services:
     restart: always
 
   frontend:
-    image: apecee/portfolio_website:portfolio_website_frontend_v2_latest
+    image: apecee/portfolio_website:portfolio_website_frontend_v2_0.0.7
     expose:
       - "80"
     restart: always
@@ -21,13 +19,15 @@ services:
       - backend
     environment:
       - NODE_ENV=production
-      - VITE_API_BASE_URL=https://andrewcee.io
+      - HOST=0.0.0.0
 
   backend:
-    image: apecee/portfolio_website:portfolio_website_backend_0.0.6
+    image: apecee/portfolio_website:portfolio_website_backend_0.0.20
     expose:
       - "8000"
     restart: always
+    env_file:
+      - ${BACKEND_ENV_FILE:-./backend.env}
     environment:
       - PYTHONUNBUFFERED=1
       - ENV=production

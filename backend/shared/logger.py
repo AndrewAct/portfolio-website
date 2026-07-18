@@ -15,9 +15,7 @@ def setup_logging(logger_name="url_shortener") -> Any:
         handler.setLevel(logging.INFO)
 
         # Create formatter
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-        )
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
         handler.setFormatter(formatter)
 
         root_logger.addHandler(handler)
