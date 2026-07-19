@@ -1,33 +1,59 @@
+import os
+import re
+from contextlib import asynccontextmanager
+from datetime import datetime
+
+import feedparser
+import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-# from apps.services.url_shortener.router import router as url_shortener_router
-from apps.services.url_shortener.router import redirect_router, api_router
-# from apps.services.medium_posts.router import router as medium_posts_router // To be implemented
-from apps.services.url_shortener.database import init_db, close_db
+from pydantic import BaseModel
+
 from apps.core.logger import setup_logging
-from apps.monitoring.telemetry import setup_telemetry
+from apps.monitoring.metrics_collector import MetricsCollector
+from apps.monitoring.middleware import PrometheusMiddleware
+
 # from apps.monitoring.prometheus import PrometheusMiddleware
 # from apps.monitoring.middleware import PrometheusMiddleWare
 from apps.monitoring.prometheus import router as metrics_router
-from apps.monitoring.middleware import PrometheusMiddleware
-from apps.monitoring.metrics_collector import MetricsCollector
+from apps.monitoring.telemetry import setup_telemetry
+from apps.services.horoscope.router import get_horoscope_service
 from apps.services.horoscope.router import router as horoscope_router
-import httpx
-import feedparser
-from typing import List, Optional
-from pydantic import BaseModel
-import xml.etree.ElementTree as ET
-from datetime import datetime
-import re
-import os
+
+# from apps.services.medium_posts.router import router as medium_posts_router // To be implemented
+from apps.services.url_shortener.database import close_db, init_db
+
+# from apps.services.url_shortener.router import router as url_shortener_router
+from apps.services.url_shortener.router import api_router, redirect_router
 
 # Setup logging
 logger = setup_logging()
 
+
+metrics_collector = MetricsCollector(collection_interval=60)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    logger.info("Initializing database connection...")
+    await init_db()
+    metrics_collector.start()
+    try:
+        yield
+    finally:
+        logger.info("Stopping metrics collection...")
+        await metrics_collector.stop()
+        logger.info("Closing Gemini client...")
+        await get_horoscope_service().close()
+        logger.info("Closing database connection...")
+        await close_db()
+
+
 app = FastAPI(
     title="Andrew's Portfolio Website",
     description="Collection of utility services. Including Medium posts fetcher, URL shortener, and Horoscope",
-    version="0.0.2"
+    version="0.0.2",
+    lifespan=lifespan,
 )
 
 # Get environment type (development or production)
@@ -36,7 +62,7 @@ ENV = os.getenv("ENV", "development")
 if ENV == "development":
     origins = [
         "http://localhost:5173",  # Vue dev server
-        "https://localhost:80",    # Docker frontend port
+        "https://localhost:80",  # Docker frontend port
         "http://127.0.0.1:4200",
         "http://127.0.0.1:5173",  # Vue dev server
         "http://127.0.0.1:80",
@@ -76,14 +102,17 @@ def hello_world():
     return {
         "message": "Welcome to Andrew's Portfolio Website",
         "version": "0.0.1",
-        "services": [
-            "URL Shortener",
-            "Medium Posts Fetcher"
-        ]
+        "services": ["URL Shortener", "Medium Posts Fetcher"],
     }
 
 
-@app.get("/api/medium-posts/{username}", response_model=List[MediumPost])
+@app.get("/health", include_in_schema=False)
+def healthcheck():
+    """Report process liveness without calling external dependencies."""
+    return {"status": "ok"}
+
+
+@app.get("/api/medium-posts/{username}", response_model=list[MediumPost])
 async def get_medium_posts(username: str = "andrewact"):
     try:
         async with httpx.AsyncClient() as client:
@@ -97,9 +126,9 @@ async def get_medium_posts(username: str = "andrewact"):
         for entry in feed.entries:
             # Extract content from either 'content' list or 'summary' field
             content = ""
-            if hasattr(entry, 'content') and len(entry.content) > 0:
+            if hasattr(entry, "content") and len(entry.content) > 0:
                 content = entry.content[0].value
-            elif hasattr(entry, 'summary'):
+            elif hasattr(entry, "summary"):
                 content = entry.summary
 
             # Extract thumbnail
@@ -109,7 +138,7 @@ async def get_medium_posts(username: str = "andrewact"):
             #     thumbnail = img_match.group(1)
 
             # Calculate reading time (rough estimate: 200 words per minute)
-            content_text = re.sub(r'<[^>]+>', '', content)
+            content_text = re.sub(r"<[^>]+>", "", content)
             word_count = len(content_text.split())
             reading_time = max(1, round(word_count / 200))
 
@@ -117,16 +146,18 @@ async def get_medium_posts(username: str = "andrewact"):
                 title=entry.title,
                 link=entry.link,
                 author=entry.author,
-                published_date=datetime.strptime(entry.published, "%a, %d %b %Y %H:%M:%S %Z").isoformat(),
+                published_date=datetime.strptime(
+                    entry.published, "%a, %d %b %Y %H:%M:%S %Z"
+                ).isoformat(),
                 content=content,
-                reading_time=reading_time
+                reading_time=reading_time,
                 # thumbnail=thumbnail
             )
             posts.append(post)
 
         return posts
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/utilities")
@@ -135,46 +166,21 @@ def get_utilities():
 
 
 # Mount the redirect router at root level
-app.include_router(
-    redirect_router,
-    tags=["URL Shortener Redirect"]
-)
+app.include_router(redirect_router, tags=["URL Shortener Redirect"])
 
 # Mount the API router with prefix
-app.include_router(
-    api_router,
-    prefix="/utilities/url_shortener",
-    tags=["URL Shortener API"]
-)
+app.include_router(api_router, prefix="/utilities/url_shortener", tags=["URL Shortener API"])
 
 # Include API router for Horoscope as well
-app.include_router(
-    horoscope_router,
-    prefix="/utilities/horoscope",
-    tags=["Horoscope"]
-)
+app.include_router(horoscope_router, prefix="/utilities/horoscope", tags=["Horoscope"])
 
 
 # Add observability with OpenTelemetry
 setup_telemetry(app)
 
 # Add metrics endpoint
-app.include_router(metrics_router, tags=['Monitoring'])
+app.include_router(metrics_router, tags=["Monitoring"])
 
 # Integrate middleware
 app.middleware("http")(PrometheusMiddleware())
 # app.add_middleware(PrometheusMiddleware)
-
-metrics_collector = MetricsCollector(app, collection_interval=60)  # Collect on minute basis
-metrics_collector.start()
-
-@app.on_event("startup")
-async def startup_event():
-    logger.info("Initializing database connection...")
-    await init_db()
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    logger.info("Closing database connection...")
-    await close_db()

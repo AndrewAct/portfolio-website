@@ -1,68 +1,39 @@
-# Builder stage
-FROM python:3.11-alpine AS builder
+# syntax=docker/dockerfile:1.7
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=off \
-    PIP_DISABLE_PIP_VERSION_CHECK=on \
-    PIP_DEFAULT_TIMEOUT=100
+FROM python:3.11-slim-bookworm AS builder
 
-# Install system dependencies
-RUN apk add --no-cache \
-    gcc \
-    musl-dev \
-    python3-dev \
-    libffi-dev \
-    openssl-dev \
-    cargo \
-    g++
+COPY --from=ghcr.io/astral-sh/uv:0.11.16 /uv /uvx /bin/
 
-# Create and activate virtual environment
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-
-# First uninstall bson if it exists
-RUN pip uninstall -y bson
-
-# Copy and install requirements first (for better caching)
-COPY requirements.txt .
-
-## Install MongoDB-related packages and requirements
-RUN pip install --no-cache-dir \
-    "pymongo[srv]==4.9.2" \
-    "motor==3.6.1" \
-    "pydantic>=2.5.2" \
-    "pydantic-settings>=2.1.0" \
-    -r requirements.txt
-
-
-# Final stage
-FROM python:3.11-alpine
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=0
 
 WORKDIR /app
 
-# Copy virtual environment from builder
-COPY --from=builder /opt/venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+# Install locked runtime dependencies in a cacheable layer.
+COPY pyproject.toml uv.lock ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-install-project
 
-# Install only required runtime dependencies
-RUN apk add --no-cache libffi openssl
+COPY . .
 
-# Create non-root user
-RUN adduser -D appuser
 
-# Copy the .env file first
-COPY .env .env
+FROM python:3.11-slim-bookworm AS runtime
 
-# Copy project files
-COPY --chown=appuser:appuser . .
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# Switch to non-root user
-USER appuser
+RUN groupadd --system app && useradd --system --gid app --home-dir /app app
 
-# Expose the port
+WORKDIR /app
+COPY --from=builder --chown=app:app /app /app
+
+USER app
+
 EXPOSE 8000
 
-# Command to run the application
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
