@@ -31,3 +31,9 @@ cache_clean_solution.md
 
 # venv
 /backend/venv
+/backend/venv.broken-*
+
+# Python test artifacts
+.coverage
+coverage.xml
+htmlcov/

@@ -1,0 +1,98 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - "backend/**"
+      - "../../backend/backend.env.example"
+      - "docker-compose.yaml"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "../../backend/backend.env.example"
+      - "docker-compose.yaml"
+      - ".github/workflows/backend-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Python quality gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      MONGODB_USERNAME: ci-user
+      MONGODB_PASSWORD: ci-password
+      MONGODB_CLUSTER: example.mongodb.net
+      MONGODB_DATABASE: portfolio-test
+      GRAFANA_API_KEY: ci-key
+      GRAFANA_INSTANCE_ID: ci-instance
+      GRAFANA_OTLP_ENDPOINT: https://example.invalid
+      GEMINI_API_KEY: ""
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: "0.11.16"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Install locked dependencies
+        run: uv sync --all-groups --frozen
+
+      - name: Check formatting
+        run: uv run ruff format --check .
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Type-check
+        run: uv run ty check apps main.py
+
+      - name: Test with 80% apps coverage gate
+        run: uv run pytest
+
+      - name: Import FastAPI application
+        run: uv run python -c "from main import app; assert app.routes"
+
+  container:
+    name: Container build
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Build production image
+        run: docker build --tag portfolio-backend:ci backend
+
+      - name: Verify image imports without embedded secrets
+        run: |
+          docker run --rm --entrypoint sh portfolio-backend:ci \
+            -c 'test ! -e /app/.env && test ! -e /app/requirements.txt'
+          docker run --rm --entrypoint python \
+            --env MONGODB_USERNAME=ci-user \
+            --env MONGODB_PASSWORD=ci-password \
+            --env MONGODB_CLUSTER=example.mongodb.net \
+            --env MONGODB_DATABASE=portfolio-test \
+            --env GRAFANA_API_KEY=ci-key \
+            --env GRAFANA_INSTANCE_ID=ci-instance \
+            --env GRAFANA_OTLP_ENDPOINT=https://example.invalid \
+            portfolio-backend:ci \
+            -c "from importlib.util import find_spec; from main import app, healthcheck; assert app.routes; assert healthcheck() == {'status': 'ok'}; assert find_spec('pytest') is None; assert find_spec('ruff') is None; assert find_spec('ty') is None"

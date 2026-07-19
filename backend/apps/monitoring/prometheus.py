@@ -1,19 +1,17 @@
-from prometheus_client import Counter, Histogram, Gauge
-from prometheus_client import generate_latest, CONTENT_TYPE_LATEST, REGISTRY
+import base64
+from typing import Any
+
+import psutil
 from fastapi import APIRouter, Response
-from opentelemetry import metrics
+from opentelemetry import metrics as otel_metrics
+from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+from prometheus_client import CONTENT_TYPE_LATEST, REGISTRY, Counter, Gauge, generate_latest
 from prometheus_client.parser import text_string_to_metric_families
-import base64
-import psutil
-import time
+
 from ..config import get_settings
 from ..core.logger import setup_logging
-import asyncio
-from typing import Dict
-from fastapi.background import BackgroundTasks
 
 settings = get_settings()
 logger = setup_logging("OTLP Prometheus")
@@ -22,9 +20,9 @@ logger = setup_logging("OTLP Prometheus")
 # Reduced label cardinality: removed 'status' label to reduce series count
 # Status codes can be tracked separately if needed, or grouped (2xx, 4xx, 5xx)
 http_requests_total = Counter(
-    'http_requests_total',
-    'Total HTTP Requests',
-    ['method', 'endpoint']  # Removed 'status' label to reduce cardinality
+    "http_requests_total",
+    "Total HTTP Requests",
+    ["method", "endpoint"],  # Removed 'status' label to reduce cardinality
 )
 
 # http_request_duration_seconds = Histogram(
@@ -33,75 +31,55 @@ http_requests_total = Counter(
 #     ['method', 'endpoint']
 # )
 
-system_cpu_usage = Gauge(
-    'system_cpu_usage',
-    'System CPU Usage Percentage',
-    ['cpu_type']
-)
+system_cpu_usage = Gauge("system_cpu_usage", "System CPU Usage Percentage", ["cpu_type"])
 
-system_memory_usage = Gauge(
-    'system_memory_usage_bytes',
-    'System Memory Usage in Bytes',
-    ['type']
-)
+system_memory_usage = Gauge("system_memory_usage_bytes", "System Memory Usage in Bytes", ["type"])
 
 system_disk_usage = Gauge(
-    'system_disk_usage_bytes',
-    'Disk Usage in Bytes',
-    ['device', 'mountpoint', 'type']
+    "system_disk_usage_bytes", "Disk Usage in Bytes", ["device", "mountpoint", "type"]
 )
 
 
 class MetricsExporter:
     def __init__(self):
         self.setup_otlp_exporter()
-        self.meters: Dict[str, any] = {}
+        self.meters: dict[str, Any] = {}
 
     def setup_otlp_exporter(self):
         """Set up OTLP exporter"""
         auth_token = f"{settings.grafana_instance_id}:{settings.grafana_api_key}"
-        basic_auth = base64.b64encode(auth_token.encode()).decode('utf-8')
+        basic_auth = base64.b64encode(auth_token.encode()).decode("utf-8")
 
         headers = {
             "Authorization": f"Basic {basic_auth}",
-            "X-Scope-OrgID": str(settings.grafana_instance_id)
+            "X-Scope-OrgID": str(settings.grafana_instance_id),
         }
 
         exporter = OTLPMetricExporter(
-            endpoint=f"{settings.grafana_otlp_endpoint}/v1/metrics",
-            headers=headers,
-            timeout=30
+            endpoint=f"{settings.grafana_otlp_endpoint}/v1/metrics", headers=headers, timeout=30
         )
 
         reader = PeriodicExportingMetricReader(
             exporter,
-            export_interval_millis=30_000  # Export data on 2 minute basis - will increase if the data load is too heavy
+            export_interval_millis=30_000,  # Export data on 2 minute basis - will increase if the data load is too heavy
         )
 
         provider = MeterProvider(metric_readers=[reader])
-        metrics.set_meter_provider(provider)
-        self.meter = metrics.get_meter("app_metrics")
+        otel_metrics.set_meter_provider(provider)
+        self.meter = otel_metrics.get_meter("app_metrics")
 
     def get_or_create_metric(self, name, metric_type, description):
         """Obtain or create OTLP metrics"""
         if name not in self.meters:
             if metric_type == "counter":
                 self.meters[name] = self.meter.create_counter(
-                    name,
-                    description=description,
-                    unit="1"
+                    name, description=description, unit="1"
                 )
             elif metric_type == "gauge":
-                self.meters[name] = self.meter.create_gauge(
-                    name,
-                    description=description,
-                    unit="1"
-                )
+                self.meters[name] = self.meter.create_gauge(name, description=description, unit="1")
             elif metric_type == "histogram":
                 self.meters[name] = self.meter.create_histogram(
-                    name,
-                    description=description,
-                    unit="1"
+                    name, description=description, unit="1"
                 )
         return self.meters[name]
 
@@ -114,26 +92,26 @@ class MetricsExporter:
                 # These are auto-generated timestamp metrics from Prometheus Counters
                 if family.name.endswith("_created") or "_created_ratio" in family.name:
                     continue
-                
+
                 metric_type = family.type
                 if metric_type in ["counter", "gauge", "histogram"]:
                     metric = self.get_or_create_metric(
-                        family.name,
-                        metric_type,
-                        family.documentation
+                        family.name, metric_type, family.documentation
                     )
 
                     for sample in family.samples:
                         # Skip _created and _sum, _count samples for histograms
                         if sample.name.endswith("_created") or "_created_ratio" in sample.name:
                             continue
-                            
+
                         if metric_type == "counter":
                             metric.add(sample.value, sample.labels)
                         elif metric_type == "gauge":
                             metric.set(sample.value, sample.labels)
                         elif metric_type == "histogram":
-                            if not sample.name.endswith("_sum") and not sample.name.endswith("_count"):
+                            if not sample.name.endswith("_sum") and not sample.name.endswith(
+                                "_count"
+                            ):
                                 metric.record(sample.value, sample.labels)
 
             # logger.info(metric)
@@ -152,34 +130,28 @@ def collect_system_metrics():
     try:
         # CPU metrics
         cpu_times_percent = psutil.cpu_times_percent()
-        system_cpu_usage.labels('system').set(cpu_times_percent.system)
-        system_cpu_usage.labels('user').set(cpu_times_percent.user)
-        system_cpu_usage.labels('idle').set(cpu_times_percent.idle)
+        system_cpu_usage.labels("system").set(cpu_times_percent.system)
+        system_cpu_usage.labels("user").set(cpu_times_percent.user)
+        system_cpu_usage.labels("idle").set(cpu_times_percent.idle)
 
         # Memory metrics
         memory = psutil.virtual_memory()
-        system_memory_usage.labels('total').set(memory.total)
-        system_memory_usage.labels('available').set(memory.available)
-        system_memory_usage.labels('used').set(memory.used)
+        system_memory_usage.labels("total").set(memory.total)
+        system_memory_usage.labels("available").set(memory.available)
+        system_memory_usage.labels("used").set(memory.used)
 
         # Disk metrics
         for partition in psutil.disk_partitions():
             if partition.fstype:
                 disk_usage = psutil.disk_usage(partition.mountpoint)
                 system_disk_usage.labels(
-                    device=partition.device,
-                    mountpoint=partition.mountpoint,
-                    type='total'
+                    device=partition.device, mountpoint=partition.mountpoint, type="total"
                 ).set(disk_usage.total)
                 system_disk_usage.labels(
-                    device=partition.device,
-                    mountpoint=partition.mountpoint,
-                    type='used'
+                    device=partition.device, mountpoint=partition.mountpoint, type="used"
                 ).set(disk_usage.used)
                 system_disk_usage.labels(
-                    device=partition.device,
-                    mountpoint=partition.mountpoint,
-                    type='free'
+                    device=partition.device, mountpoint=partition.mountpoint, type="free"
                 ).set(disk_usage.free)
 
     except Exception as e:
@@ -188,7 +160,7 @@ def collect_system_metrics():
 
 async def forward_metrics_task():
     """Forward metrics in daemon"""
-    metrics_data = generate_latest(REGISTRY).decode('utf-8')
+    metrics_data = generate_latest(REGISTRY).decode("utf-8")
     metrics_exporter.forward_metrics(metrics_data)
 
 
@@ -209,16 +181,13 @@ router = APIRouter()
 #     )
 
 
-@router.get('/metrics')
-async def metrics():
+@router.get("/metrics")
+async def metrics_endpoint():
     """Expose metrics in Prometheus format"""
     # Collect latest system metrics before generating response
     collect_system_metrics()
 
-    return Response(
-        generate_latest(REGISTRY),
-        media_type=CONTENT_TYPE_LATEST
-    )
+    return Response(generate_latest(REGISTRY), media_type=CONTENT_TYPE_LATEST)
 
 
 def track_metrics(method: str, endpoint: str, status_code: int, duration: float):
@@ -226,10 +195,7 @@ def track_metrics(method: str, endpoint: str, status_code: int, duration: float)
     try:
         # Update prometheus metrics
         # Removed status_code label to reduce cardinality
-        http_requests_total.labels(
-            method=method,
-            endpoint=endpoint
-        ).inc()
+        http_requests_total.labels(method=method, endpoint=endpoint).inc()
 
         # http_request_duration_seconds.labels(
         #     method=method,

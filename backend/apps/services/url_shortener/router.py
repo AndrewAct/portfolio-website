@@ -1,16 +1,17 @@
 # services/url_shortener/router.py
+import logging
+
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import RedirectResponse
-from typing import Dict
-from .schemas import URLBase, URLResponse, DeleteURLRequest
+
+from .schemas import DeleteURLRequest, URLBase, URLResponse
 from .service import URLShortenerService
-import logging
 
 logger = logging.getLogger("url_shortener")
 
 # Create two separate routers
 redirect_router = APIRouter()  # For redirect routes
-api_router = APIRouter()       # For API endpoints
+api_router = APIRouter()  # For API endpoints
 
 url_shortener_service = URLShortenerService()
 
@@ -25,17 +26,14 @@ async def redirect_to_original_url(short_url: str) -> RedirectResponse:
         logger.info(f"Redirecting short url code: {short_url}")
         original_url = await url_shortener_service.get_original_url(short_url)
 
-        if not original_url.startswith(('http://', 'https://')):
-            original_url = 'https://' + original_url
+        if not original_url.startswith(("http://", "https://")):
+            original_url = "https://" + original_url
 
         logger.info(f"Redirecting to: {original_url}")
         return RedirectResponse(url=original_url, status_code=302)
     except Exception as e:
         logger.error(f"Error redirecting {short_url}: {str(e)}")
-        raise HTTPException(
-            status_code=404,
-            detail=f"URL not found for code: {short_url}"
-        )
+        raise HTTPException(status_code=404, detail=f"URL not found for code: {short_url}") from e
 
 
 # API routes on api_router
@@ -47,29 +45,25 @@ async def create_short_url(url_request: URLBase) -> URLResponse:
         return response
     except Exception as e:
         logger.error(f"Error creating short URL: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to create short URL: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to create short URL: {str(e)}") from e
 
 
 @api_router.get("/{short_url}")
-async def get_original_url(short_url: str) -> Dict[str, str]:
+async def get_original_url(short_url: str) -> dict[str, str]:
     try:
         logger.info(f"Getting original URL for code: {short_url}")
         original_url = await url_shortener_service.get_original_url(short_url)
         return {"original_url": original_url}
     except Exception as e:
         logger.error(f"Error retrieving URL for code {short_url}: {str(e)}")
-        raise HTTPException(
-            status_code=404,
-            detail=f"URL not found for code: {short_url}"
-        )
+        raise HTTPException(status_code=404, detail=f"URL not found for code: {short_url}") from e
 
 
 # @api_router.delete("/{short_url}")
 @api_router.delete("/")
-async def delete_url(request: DeleteURLRequest,) -> Dict[str, str]:
+async def delete_url(
+    request: DeleteURLRequest,
+) -> dict[str, str]:
     try:
         logger.info(f"Deleting URL mapping for code: {request.url}")
         await url_shortener_service.delete_url(request.url)
@@ -77,13 +71,12 @@ async def delete_url(request: DeleteURLRequest,) -> Dict[str, str]:
     except Exception as e:
         logger.error(f"Error deleting URL mapping: {str(e)}")
         raise HTTPException(
-            status_code=404,
-            detail=f"Failed to delete URL mapping: {str(e)}"
-        )
+            status_code=404, detail=f"Failed to delete URL mapping: {str(e)}"
+        ) from e
 
 
 @api_router.get("")
-async def get_service_info() -> Dict[str, str]:
+async def get_service_info() -> dict[str, object]:
     """
     Get information about the URL shortener service.
 
@@ -99,6 +92,6 @@ async def get_service_info() -> Dict[str, str]:
             "redirect": "GET /r/{short_url}",
             "retrieve": "GET /{short_url}",
             "delete": "DELETE /{short_url}",
-            "info": "GET /"
-        }
+            "info": "GET /",
+        },
     }

@@ -8,6 +8,9 @@ Check this file at the start of every session. Mark items done as you go.
 
 - [x] GitHub social icon added (bottom-left, HomeView.vue)
 - [x] Projects page at `/projects` — TickSense glass card with full feature list → ticksense.ai
+- [x] WrightSOP / 图匠 project card — bilingual name, Hanyu Pinyin plus English-IPA guide, original/modern dictionary definition, Supabase-backed architecture stack, and tujiang.build CTA
+- [x] Projects page navigation — accessible previous/next controls with looping project count
+- [x] Projects data source — typed `src/data/projects.ts` catalog keeps content out of the view component
 - [x] Utilities page — full glassmorphism redesign over homepage background image
 - [x] Horoscope result card — redesigned as premium cream "oracle card" with Cormorant Garamond title, gold accent bar, hidden duplicate h2/h3 via CSS
 - [x] Font: switched from Syne (too flat/wide) to Cormorant Garamond italic 700 for all display titles
@@ -17,9 +20,9 @@ Check this file at the start of every session. Mark items done as you go.
 
 ## Projects Page
 
-- [ ] Carousel navigation: left/right arrow buttons to scroll through multiple projects
+- [x] Carousel navigation: left/right arrow buttons to scroll through multiple projects
 - [ ] Auto-refresh every 60 seconds (when project list becomes API-driven)
-- [ ] Data source: move project list to a JSON file or `/api/projects` endpoint — adding new projects should not require code changes
+- [x] Data source: move project content to a typed catalog — adding a project no longer requires component changes
 - [ ] Consider glassmorphism card grid for multiple projects (reference: `lvyovo-wiki.tech/projects`)
 
 ---
@@ -34,5 +37,6 @@ Check this file at the start of every session. Mark items done as you go.
 
 ## General / Future
 
+- [x] Add WrightSOP / 图匠 to the Projects page
 - [ ] Add more projects to the Projects page as they ship
 - [ ] Consider a shared `GlassPage.vue` layout component to DRY up the background + overlay + back-button pattern used by both `/projects` and `/utilities`

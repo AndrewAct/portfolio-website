@@ -1,40 +1,36 @@
-from motor.motor_asyncio import AsyncIOMotorClient
-from pymongo import IndexModel, ASCENDING
 import certifi
+from pymongo import ASCENDING, AsyncMongoClient, IndexModel
+from pymongo.server_api import ServerApi
+
 from ...config import get_settings
 
 settings = get_settings()
 
 # Create MongoDB client with updated SSL/TLS configuration
-client = AsyncIOMotorClient(
+client = AsyncMongoClient(
     settings.mongodb_url,
+    server_api=ServerApi("1"),
     tlsCAFile=certifi.where(),  # Explicitly specify the CA file
-    serverSelectionTimeoutMS=5000
+    serverSelectionTimeoutMS=5000,
 )
 
-
-# Verify the connection
-try:
-    # The ismaster command is cheap and does not require auth.
-    client.admin.command('ismaster')
-except Exception as e:
-    print(f"Failed to connect to MongoDB: {e}")
-    raise
 
 database = client[settings.mongodb_database]
 url_collection = database.urls
 
 
 async def init_db():
-    # Create indexes for faster queries
-    await url_collection.create_indexes([
-        IndexModel([("short_url", ASCENDING)], unique=True),
-        IndexModel([("original_url", ASCENDING)])
-    ])
+    # The first awaited operation also verifies the MongoDB connection.
+    await url_collection.create_indexes(
+        [
+            IndexModel([("short_url", ASCENDING)], unique=True),
+            IndexModel([("original_url", ASCENDING)]),
+        ]
+    )
 
 
 async def close_db():
-    client.close()
+    await client.close()
 
 
 def get_collection():

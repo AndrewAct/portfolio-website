@@ -1,0 +1,73 @@
+[project]
+name = "portfolio-backend"
+version = "0.1.0"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "feedparser>=6.0",
+    "google-genai>=1.2",
+    "httpx>=0.27",
+    "opentelemetry-api>=1.31",
+    "opentelemetry-exporter-otlp-proto-http>=1.31",
+    "opentelemetry-instrumentation-fastapi>=0.52b1",
+    "opentelemetry-instrumentation-requests>=0.52b1",
+    "opentelemetry-sdk>=1.31",
+    "prometheus-client>=0.21",
+    "psutil>=5.9",
+    "pydantic-settings>=2.8",
+    "pymongo>=4.13",
+    "python-dotenv>=1.0",
+    "requests>=2.32",
+    "uvicorn[standard]>=0.32",
+    "validators>=0.34",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "ruff>=0.8",
+    "ty>=0.0.56",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+addopts = [
+    "--strict-config",
+    "--strict-markers",
+    "--cov=apps",
+    "--cov-branch",
+    "--cov-report=term-missing",
+    "--cov-fail-under=80",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["apps"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+skip_covered = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["archives", "venv.broken-*"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+
+[tool.ty.environment]
+python-version = "3.11"
+
+[tool.ty.rules]
+# Lifespan and timezone deprecations are tracked separately from type errors.
+deprecated = "ignore"
