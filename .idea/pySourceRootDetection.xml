@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PySourceRootDetectionService">
+    <option name="sourcePathsSet">
+      <set>
+        <option value="$PROJECT_DIR$/backend" />
+        <option value="$PROJECT_DIR$/backend/venv.broken-20260718/lib/python3.12/site-packages" />
+      </set>
+    </option>
+  </component>
+</project>
