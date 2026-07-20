@@ -22,9 +22,23 @@ services:
       - HOST=0.0.0.0
 
   backend:
-    image: apecee/portfolio_website:portfolio_website_backend_0.0.20
+    image: &backend_image apecee/portfolio_website:portfolio_website_backend_0.0.20
     expose:
       - "8000"
+    restart: always
+    env_file:
+      - ${BACKEND_ENV_FILE:-./backend.env}
+    environment:
+      - PYTHONUNBUFFERED=1
+      - ENV=production
+
+  horoscope-worker:
+    # Same image as `backend` (anchor above keeps the tag from drifting between the two)
+    # — the worker shares the codebase/container, just with a different entrypoint command.
+    image: *backend_image
+    # No `uv run` prefix: the shipped image's runtime stage never copies the uv binary
+    # (only the Dockerfile's builder stage does) — PATH already includes .venv/bin.
+    command: python -m apps.workers.horoscope_email
     restart: always
     env_file:
       - ${BACKEND_ENV_FILE:-./backend.env}
