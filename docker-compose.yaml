@@ -40,6 +40,10 @@ services:
     # (only the Dockerfile's builder stage does) — PATH already includes .venv/bin.
     command: python -m apps.workers.horoscope_email
     restart: always
+    # Inherits the backend image's HEALTHCHECK (curls 127.0.0.1:8000/health),
+    # but this command never listens on 8000 — disable it, it'd always fail.
+    healthcheck:
+      test: ["NONE"]
     env_file:
       - ./backend.env
     environment:
