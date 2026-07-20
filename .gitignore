@@ -44,3 +44,4 @@ htmlcov/
 # Agent files
 CLAUDE.md
 AGENTS.md
+./.claude
