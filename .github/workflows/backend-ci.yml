@@ -9,7 +9,7 @@ on:
       - "docker-compose.yaml"
       - ".github/workflows/backend-ci.yml"
   pull_request:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - "backend/**"
       - "../../backend/backend.env.example"
@@ -41,6 +41,11 @@ jobs:
       GRAFANA_INSTANCE_ID: ci-instance
       GRAFANA_OTLP_ENDPOINT: https://example.invalid
       GEMINI_API_KEY: ""
+      DATABASE_URL: postgresql://ci-user:ci-password@example.invalid/ci-test
+      RESEND_API_KEY: ci-key
+      RESEND_FROM_EMAIL: horoscope@example.invalid
+      RESEND_WEBHOOK_SECRET: "whsec_Y2ktd2ViaG9vay1zZWNyZXQ="
+      SUBSCRIPTION_TOKEN_SECRET: ci-token-secret
     steps:
       - name: Check out repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -94,5 +99,10 @@ jobs:
             --env GRAFANA_API_KEY=ci-key \
             --env GRAFANA_INSTANCE_ID=ci-instance \
             --env GRAFANA_OTLP_ENDPOINT=https://example.invalid \
+            --env DATABASE_URL=postgresql://ci-user:ci-password@example.invalid/ci-test \
+            --env RESEND_API_KEY=ci-key \
+            --env RESEND_FROM_EMAIL=horoscope@example.invalid \
+            --env RESEND_WEBHOOK_SECRET=whsec_Y2ktd2ViaG9vay1zZWNyZXQ= \
+            --env SUBSCRIPTION_TOKEN_SECRET=ci-token-secret \
             portfolio-backend:ci \
             -c "from importlib.util import find_spec; from main import app, healthcheck; assert app.routes; assert healthcheck() == {'status': 'ok'}; assert find_spec('pytest') is None; assert find_spec('ruff') is None; assert find_spec('ty') is None"

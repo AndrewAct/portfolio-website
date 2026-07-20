@@ -10,6 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from apps.core.logger import setup_logging
+from apps.database.neon import close_db as close_postgres_db
+from apps.database.neon import init_db as init_postgres_db
 from apps.monitoring.metrics_collector import MetricsCollector
 from apps.monitoring.middleware import PrometheusMiddleware
 
@@ -19,6 +21,9 @@ from apps.monitoring.prometheus import router as metrics_router
 from apps.monitoring.telemetry import setup_telemetry
 from apps.services.horoscope.router import get_horoscope_service
 from apps.services.horoscope.router import router as horoscope_router
+from apps.services.horoscope_subscriptions.router import get_subscription_service
+from apps.services.horoscope_subscriptions.router import router as horoscope_subscriptions_router
+from apps.services.horoscope_subscriptions.webhooks import router as horoscope_webhooks_router
 
 # from apps.services.medium_posts.router import router as medium_posts_router // To be implemented
 from apps.services.url_shortener.database import close_db, init_db
@@ -35,8 +40,9 @@ metrics_collector = MetricsCollector(collection_interval=60)
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    logger.info("Initializing database connection...")
+    logger.info("Initializing database connections...")
     await init_db()
+    await init_postgres_db()
     metrics_collector.start()
     try:
         yield
@@ -45,8 +51,11 @@ async def lifespan(_app: FastAPI):
         await metrics_collector.stop()
         logger.info("Closing Gemini client...")
         await get_horoscope_service().close()
-        logger.info("Closing database connection...")
+        logger.info("Closing Resend client...")
+        await get_subscription_service().close()
+        logger.info("Closing database connections...")
         await close_db()
+        await close_postgres_db()
 
 
 app = FastAPI(
@@ -173,6 +182,20 @@ app.include_router(api_router, prefix="/utilities/url_shortener", tags=["URL Sho
 
 # Include API router for Horoscope as well
 app.include_router(horoscope_router, prefix="/utilities/horoscope", tags=["Horoscope"])
+
+# Horoscope email subscriptions: a separate router/prefix from horoscope_router above,
+# since that one already registers a `GET /{zodiac_sign}` catch-all — adding static routes
+# to the same router risks Starlette route-order shadowing.
+app.include_router(
+    horoscope_subscriptions_router,
+    prefix="/utilities/horoscope/subscriptions",
+    tags=["Horoscope Subscriptions"],
+)
+app.include_router(
+    horoscope_webhooks_router,
+    prefix="/utilities/horoscope/webhooks",
+    tags=["Horoscope Webhooks"],
+)
 
 
 # Add observability with OpenTelemetry

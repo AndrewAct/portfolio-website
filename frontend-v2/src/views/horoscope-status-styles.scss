@@ -1,0 +1,42 @@
+/* Shared body styling for the horoscope confirm/preferences/unsubscribe standalone pages —
+   sits inside a .glass-panel from glass-page-styles.scss. */
+
+.status-panel .panel-header {
+  text-align: center;
+}
+
+.status-body {
+  padding: 0 2.6rem 2.6rem;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.status-success {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.status-error {
+  color: #fca5a5;
+}
+
+.status-email {
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 600;
+}
+
+.status-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+
+  .submit-btn {
+    width: auto;
+    padding: 0.72rem 2rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .status-body { padding: 0 1.6rem 2rem; }
+}

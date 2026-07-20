@@ -20,6 +20,7 @@ andrewcee_io.private_key
 **Dockerfile_bkp
 **Dockerfile_dev_bkp
 cache_clean_solution.md
+blog_ideas.md
 *mock_prometheus.py
 *mock_system_prom.py
 *otlp_and_tempo.md
@@ -28,6 +29,7 @@ cache_clean_solution.md
 
 #.idea files
 /backend/.idea
+.idea*
 
 # venv
 /backend/venv
@@ -37,3 +39,7 @@ cache_clean_solution.md
 .coverage
 coverage.xml
 htmlcov/
+
+# Agent files
+CLAUDE.md
+AGENTS.md
