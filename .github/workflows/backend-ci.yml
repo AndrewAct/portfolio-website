@@ -9,7 +9,7 @@ on:
       - "docker-compose.yaml"
       - ".github/workflows/backend-ci.yml"
   pull_request:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - "backend/**"
       - "../../backend/backend.env.example"

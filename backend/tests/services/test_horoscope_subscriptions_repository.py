@@ -213,6 +213,43 @@ async def test_reclaim_failed_delivery_passes_max_attempts():
 
 
 @pytest.mark.asyncio
+async def test_reclaim_stale_pending_delivery_returns_id_and_bumps_attempt_count():
+    pool, conn = make_pool()
+    conn.fetchrow.return_value = {"id": 11}
+    repo = SubscriptionRepository(pool=pool)
+    stale_before = datetime(2026, 7, 19, 12, 0, tzinfo=UTC)
+
+    result = await repo.reclaim_stale_pending_delivery(1, date(2026, 7, 19), 5, stale_before)
+
+    assert result == 11
+    query, subscription_id, local_date, max_attempts, passed_stale_before = (
+        conn.fetchrow.await_args.args
+    )
+    assert "attempt_count = attempt_count + 1" in query
+    assert "status = 'pending' AND attempt_count < $3" in query
+    assert "updated_at < $4" in query
+    assert (subscription_id, local_date, max_attempts, passed_stale_before) == (
+        1,
+        date(2026, 7, 19),
+        5,
+        stale_before,
+    )
+
+
+@pytest.mark.asyncio
+async def test_reclaim_stale_pending_delivery_returns_none_when_nothing_stale():
+    pool, conn = make_pool()
+    conn.fetchrow.return_value = None
+    repo = SubscriptionRepository(pool=pool)
+
+    result = await repo.reclaim_stale_pending_delivery(
+        1, date(2026, 7, 19), 5, datetime(2026, 7, 19, 12, 0, tzinfo=UTC)
+    )
+
+    assert result is None
+
+
+@pytest.mark.asyncio
 async def test_mark_delivery_sent_records_message_id():
     pool, conn = make_pool()
     repo = SubscriptionRepository(pool=pool)

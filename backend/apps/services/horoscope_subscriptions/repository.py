@@ -241,6 +241,32 @@ class SubscriptionRepository:
             )
             return row["id"] if row else None
 
+    async def reclaim_stale_pending_delivery(
+        self, subscription_id: int, local_date: date, max_attempts: int, stale_before: datetime
+    ) -> int | None:
+        """Rescues a delivery abandoned mid-send (worker killed between claiming it and
+        recording an outcome — e.g. SIGKILL during a deploy) rather than one still
+        legitimately in flight. Bumps attempt_count here, not just on completion: a claim
+        that never resolved within the staleness window was a real, spent attempt, and
+        this is what keeps a delivery that's abandoned on every try from being reclaimed
+        forever — it still respects max_attempts."""
+        async with self._get_pool().acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                UPDATE horoscope_deliveries
+                SET attempt_count = attempt_count + 1, updated_at = now()
+                WHERE subscription_id = $1 AND local_date = $2
+                  AND status = 'pending' AND attempt_count < $3
+                  AND updated_at < $4
+                RETURNING id
+                """,
+                subscription_id,
+                local_date,
+                max_attempts,
+                stale_before,
+            )
+            return row["id"] if row else None
+
     async def mark_delivery_sent(self, delivery_id: int, resend_message_id: str) -> None:
         async with self._get_pool().acquire() as conn:
             await conn.execute(

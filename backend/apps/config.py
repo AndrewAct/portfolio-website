@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     # Horoscope email worker polling loop
     worker_poll_interval_seconds: int = 60
     worker_max_delivery_attempts: int = 5
+    # A delivery stuck at status='pending' longer than this was almost certainly
+    # abandoned by a worker process killed mid-send (e.g. SIGKILL during a deploy, no
+    # signal handler catches it) rather than one that's still legitimately in flight —
+    # eligible for reclaim on the next tick.
+    worker_stale_pending_seconds: int = 300
 
     model_config = SettingsConfigDict(
         env_file=".env",

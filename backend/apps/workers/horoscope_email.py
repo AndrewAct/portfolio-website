@@ -4,7 +4,12 @@ State lives entirely in Postgres (claimed deliveries, attempt counts), not in-pr
 that's the whole restart story. After a crash, the next tick just re-evaluates "due" the
 same way; a delivery never attempted today becomes due immediately, and the database's
 UNIQUE(subscription_id, local_date) constraint is what makes concurrent/duplicate claims
-safe (see repository.claim_delivery / reclaim_failed_delivery).
+safe (see repository.claim_delivery / reclaim_failed_delivery). This covers a delivery
+never started or one that finished attempting and failed — but not one abandoned *mid*-
+attempt (worker killed between claiming it and recording an outcome, e.g. SIGKILL during
+a deploy with no signal handler installed). repository.reclaim_stale_pending_delivery
+covers that case: a delivery stuck at status='pending' past a staleness threshold gets
+reclaimed the same way a failed one does.
 
 Run as: python -m apps.workers.horoscope_email
 """
@@ -13,7 +18,7 @@ import asyncio
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import asyncpg
@@ -40,6 +45,7 @@ class WorkerDeps:
     delivery_service: DeliveryService
     now_utc: Callable[[], datetime] = field(default=lambda: datetime.now(UTC))
     max_attempts: int = settings.worker_max_delivery_attempts
+    stale_pending_seconds: int = settings.worker_stale_pending_seconds
 
 
 async def tick(deps: WorkerDeps) -> TickResult:
@@ -90,6 +96,16 @@ async def _claim_and_send(
     if delivery_id is None:
         delivery_id = await deps.repository.reclaim_failed_delivery(
             subscription["id"], local_date, deps.max_attempts
+        )
+    if delivery_id is None:
+        # Covers a worker killed between claiming a delivery and recording its outcome
+        # (e.g. SIGKILL during a deploy — no signal handler catches it, so the row is
+        # simply abandoned at status='pending'). A row that old was never going to
+        # resolve on its own; treat it the same as a failed attempt and give it another
+        # try, still bounded by max_attempts.
+        stale_before = now_utc - timedelta(seconds=deps.stale_pending_seconds)
+        delivery_id = await deps.repository.reclaim_stale_pending_delivery(
+            subscription["id"], local_date, deps.max_attempts, stale_before
         )
     if delivery_id is None:
         # Already sent/delivered today, retries exhausted, or claimed by another worker

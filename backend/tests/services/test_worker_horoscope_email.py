@@ -1,5 +1,5 @@
 import asyncio
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime, time, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
@@ -17,11 +17,14 @@ def make_subscription(**overrides) -> dict:
     return row
 
 
-def make_deps(subscriptions, *, now_utc: datetime, max_attempts: int = 5) -> WorkerDeps:
+def make_deps(
+    subscriptions, *, now_utc: datetime, max_attempts: int = 5, stale_pending_seconds: int = 300
+) -> WorkerDeps:
     repository = SimpleNamespace(
         list_active=AsyncMock(return_value=subscriptions),
         claim_delivery=AsyncMock(return_value=42),
         reclaim_failed_delivery=AsyncMock(return_value=None),
+        reclaim_stale_pending_delivery=AsyncMock(return_value=None),
     )
     delivery_service = SimpleNamespace(send_daily_horoscope=AsyncMock())
     return WorkerDeps(
@@ -29,6 +32,7 @@ def make_deps(subscriptions, *, now_utc: datetime, max_attempts: int = 5) -> Wor
         delivery_service=delivery_service,
         now_utc=lambda: now_utc,
         max_attempts=max_attempts,
+        stale_pending_seconds=stale_pending_seconds,
     )
 
 
@@ -88,6 +92,44 @@ async def test_tick_retries_via_reclaim_when_previous_attempt_failed():
 
 
 @pytest.mark.asyncio
+async def test_tick_reclaims_delivery_abandoned_mid_send_after_crash():
+    # Simulates a worker killed between claiming a delivery and recording its outcome
+    # (e.g. SIGKILL during a deploy): the row already exists (claim_delivery -> None) and
+    # isn't 'failed' (reclaim_failed_delivery -> None) — only the stale-pending path
+    # should resume it.
+    now_utc = datetime(2026, 7, 19, 16, 0, tzinfo=UTC)
+    deps = make_deps([make_subscription()], now_utc=now_utc, stale_pending_seconds=300)
+    deps.repository.claim_delivery.return_value = None
+    deps.repository.reclaim_failed_delivery.return_value = None
+    deps.repository.reclaim_stale_pending_delivery.return_value = 77
+
+    result = await tick(deps)
+
+    assert result.sent == 1
+    deps.repository.reclaim_stale_pending_delivery.assert_awaited_once_with(
+        1, date(2026, 7, 19), 5, now_utc - timedelta(seconds=300)
+    )
+    deps.delivery_service.send_daily_horoscope.assert_awaited_once_with(
+        make_subscription(), 77, date(2026, 7, 19)
+    )
+
+
+@pytest.mark.asyncio
+async def test_tick_does_not_reclaim_when_nothing_is_stale():
+    # claim_delivery/reclaim_failed_delivery/reclaim_stale_pending_delivery all miss —
+    # e.g. another (hypothetical) worker legitimately still has this in flight.
+    deps = make_deps([make_subscription()], now_utc=datetime(2026, 7, 19, 16, 0, tzinfo=UTC))
+    deps.repository.claim_delivery.return_value = None
+    deps.repository.reclaim_failed_delivery.return_value = None
+    deps.repository.reclaim_stale_pending_delivery.return_value = None
+
+    result = await tick(deps)
+
+    assert result.sent == 0
+    deps.delivery_service.send_daily_horoscope.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_tick_skips_and_logs_unrecognized_timezone():
     deps = make_deps(
         [make_subscription(timezone="Not/AZone")], now_utc=datetime(2026, 7, 19, 16, 0, tzinfo=UTC)
@@ -141,6 +183,7 @@ async def test_dst_fall_back_repeated_hour_does_not_double_send():
         list_active=AsyncMock(return_value=[subscription]),
         claim_delivery=AsyncMock(side_effect=[42, None]),
         reclaim_failed_delivery=AsyncMock(return_value=None),
+        reclaim_stale_pending_delivery=AsyncMock(return_value=None),
     )
     delivery_service = SimpleNamespace(send_daily_horoscope=AsyncMock())
 

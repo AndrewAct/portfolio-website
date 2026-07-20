@@ -25,6 +25,13 @@ uv run ty check apps main.py
 
 `uv run pytest` measures branch coverage for `backend/apps` and fails below 80%.
 
+Testing note: `unittest.mock.AsyncMock` is both callable and awaitable. Setting
+`AsyncMock(return_value="resend-msg-1")` means `await mock(...)` returns that value,
+while the mock object itself still records how it was awaited. Use
+`mock.await_args.kwargs` to inspect keyword arguments from the most recent await, and
+`mock.await_args_list` to inspect every awaited call. The displayed `call(...)` entries
+come from `unittest.mock.call`; they are call-record objects, not the mocked return value.
+
 ## Production configuration
 
 The backend image never contains credentials. On the server, keep the Compose file,
@@ -76,6 +83,16 @@ If we can put all shared files in all services (config.py, logger.py...), we can
 However, this violates "DRY" principle.
 
 I didn't find a better solution yet, so will stick with method for now.
+
+**`horoscope_deliveries.id` vs `resend_message_id`** — two independent id spaces, not
+derived from each other. `id` is our own sequential PK, assigned the moment a delivery is
+claimed (before Resend is even called, status still `pending`). `resend_message_id` is a
+separate id Resend generates and hands back only after a successful send — starts `NULL`,
+stays `NULL` forever if the send fails before Resend accepts it. We store a copy of theirs
+because their webhooks are correlated by *their* id, not ours: `get_delivery_by_resend_message_id()`
+(backed by `ix_horoscope_deliveries_resend_message_id`) is the reverse lookup from an
+incoming webhook event back to our row. That index is intentionally non-unique — a
+collision across two different rows is judged unlikely, not proven impossible.
 
 ### Roadmap
 - [ ] Horoscope subscription: let users edit their timezone (auto-detected via browser `Intl.DateTimeFormat`, no manual override exists yet in either the subscribe or preferences form)
