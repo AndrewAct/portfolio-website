@@ -101,6 +101,7 @@ button, .button {
   position: relative;
   display: inline-block;
 
+  min-width: 200px;
   padding: 12px 24px;
   font-size: 18px;
   border: 2px solid white;
@@ -111,6 +112,8 @@ button, .button {
   transition: all 0.3s;
   text-decoration: none;
   text-align: center;
+  white-space: nowrap;
+  box-sizing: border-box;
 
   &:hover {
     background: rgba(255, 255, 255, 0.2);
@@ -206,12 +209,6 @@ button, .button {
   .tooltip-container {
     padding: 10px 20px;
     font-size: 16px;
-  }
-}
-
-@media (max-width: 480px) {
-  .tooltip-container {
-    width: 200px;
   }
 }
 </style>
