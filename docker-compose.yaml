@@ -11,7 +11,7 @@ services:
     restart: always
 
   frontend:
-    image: apecee/portfolio_website:portfolio_website_frontend_v2_0.0.10
+    image: apecee/portfolio_website:portfolio_website_frontend_v2_0.0.11
     expose:
       - "80"
     restart: always
