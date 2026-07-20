@@ -24,6 +24,29 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-3.1-flash-lite"
     gemini_timeout_seconds: int = 15
 
+    # Neon Postgres — horoscope email subscriptions (separate from the MongoDB URL shortener store)
+    database_url: str
+
+    # Resend — outbound email for confirmation and daily horoscope delivery
+    resend_api_key: str
+    resend_from_email: str
+    # From_email isn't a real inbox — Reply-To gives subscribers a real address to
+    # reach; optional/blank omits the header entirely rather than sending an empty one.
+    resend_reply_to_email: str = ""
+    resend_webhook_secret: str
+    resend_timeout_seconds: int = 15
+
+    # HMAC secret signing confirm/preferences/unsubscribe links; never persisted
+    subscription_token_secret: str
+    confirm_token_ttl_days: int = 7
+
+    # Base URL used to build links embedded in outbound emails
+    public_base_url: str = "https://andrewcee.io"
+
+    # Horoscope email worker polling loop
+    worker_poll_interval_seconds: int = 60
+    worker_max_delivery_attempts: int = 5
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

@@ -42,6 +42,16 @@ After rotating a credential, update `backend.env` and recreate only the backend:
 docker compose up -d --force-recreate --no-deps backend
 ```
 
+`SUBSCRIPTION_TOKEN_SECRET` (signs the horoscope email confirm/preferences/unsubscribe
+links) has no default and isn't a third-party credential — generate your own:
+
+```bash
+python3 -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Use a different value per environment (local `.env` vs. server `backend.env`); rotating it
+invalidates every link that's already been emailed out.
+
 * Homepage
 
 ![image info](./images/homepage.png)
@@ -68,6 +78,7 @@ However, this violates "DRY" principle.
 I didn't find a better solution yet, so will stick with method for now.
 
 ### Roadmap
+- [ ] Horoscope subscription: let users edit their timezone (auto-detected via browser `Intl.DateTimeFormat`, no manual override exists yet in either the subscribe or preferences form)
 - [x] New feature: Project (TickSense.ai) (May 21, 2026)
 - [x] Refactor frontend for better aesthetic (May 21, 2026)
 - [x] New feature: Horoscope

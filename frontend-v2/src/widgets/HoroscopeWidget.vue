@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { getHoroscopeByBirthdate, type HoroscopeResponse } from '../services/horoscope'
+import { subscribe, extractErrorMessage } from '../services/horoscopeSubscriptions'
 import html2canvas from 'html2canvas'
 
 const today = new Date()
@@ -29,6 +30,7 @@ const languages = [
 async function onSubmit() {
   error.value = null
   horoscope.value = null
+  subscribeSuccess.value = false
   loading.value = true
   try {
     horoscope.value = await getHoroscopeByBirthdate({ birthdate: birthdate.value, gender: gender.value, language: language.value })
@@ -36,6 +38,33 @@ async function onSubmit() {
     error.value = e?.message ?? 'Failed to fetch horoscope'
   } finally {
     loading.value = false
+  }
+}
+
+const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+const subscribeEmail = ref('')
+const subscribeSendTime = ref('08:00')
+const subscribeLoading = ref(false)
+const subscribeError = ref<string | null>(null)
+const subscribeSuccess = ref(false)
+
+async function onSubscribe() {
+  subscribeError.value = null
+  subscribeLoading.value = true
+  try {
+    await subscribe({
+      email: subscribeEmail.value,
+      birthdate: birthdate.value,
+      gender: gender.value,
+      language: language.value,
+      timezone,
+      send_time_local: subscribeSendTime.value
+    })
+    subscribeSuccess.value = true
+  } catch (e) {
+    subscribeError.value = extractErrorMessage(e, 'Failed to subscribe. Please try again.')
+  } finally {
+    subscribeLoading.value = false
   }
 }
 
@@ -106,6 +135,39 @@ async function downloadHoroscope() {
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="subscribe-card" v-if="horoscope">
+      <template v-if="!subscribeSuccess">
+        <h3>Get this delivered daily</h3>
+        <p class="subtitle">Receive your {{ horoscope.zodiac_sign }} horoscope by email every day.</p>
+
+        <form @submit.prevent="onSubscribe" class="subscribe-form">
+          <div class="form-group">
+            <label for="subscribe-email">Email</label>
+            <input type="email" id="subscribe-email" v-model="subscribeEmail" class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label for="subscribe-time">Daily send time</label>
+            <input type="time" id="subscribe-time" v-model="subscribeSendTime" class="form-control" required>
+            <p class="timezone-hint">Detected timezone: {{ timezone }}</p>
+          </div>
+
+          <button type="submit" class="submit-btn" :disabled="!subscribeEmail || subscribeLoading">
+            <span v-if="!subscribeLoading">Subscribe</span>
+            <span v-else class="loading-spinner"></span>
+          </button>
+        </form>
+
+        <div class="error-container" v-if="subscribeError">
+          <div class="error-message">{{ subscribeError }}</div>
+        </div>
+      </template>
+
+      <p class="subscribe-success" v-else>
+        Check your inbox at {{ subscribeEmail }} — click the confirmation link to activate daily emails.
+      </p>
     </div>
 
     <div class="error-container" v-if="error">
