@@ -90,14 +90,20 @@ async def _claim_and_send(
     local_date = now_utc.astimezone(ZoneInfo(subscription["timezone"])).date()
     idempotency_key = f"horoscope:{subscription['id']}:{local_date.isoformat()}"
 
-    delivery_id = await deps.repository.claim_delivery(
-        subscription["id"], local_date, idempotency_key
-    )
-    if delivery_id is None:
+    # Cheap read first, so a subscription already resolved today (sent/delivered) never
+    # reaches an INSERT — every prior tick for the rest of the day used to attempt one
+    # anyway and lose it to ON CONFLICT DO NOTHING, burning a bigserial id each time.
+    status = await deps.repository.get_delivery_status(subscription["id"], local_date)
+
+    if status is None:
+        delivery_id = await deps.repository.claim_delivery(
+            subscription["id"], local_date, idempotency_key
+        )
+    elif status == "failed":
         delivery_id = await deps.repository.reclaim_failed_delivery(
             subscription["id"], local_date, deps.max_attempts
         )
-    if delivery_id is None:
+    elif status == "pending":
         # Covers a worker killed between claiming a delivery and recording its outcome
         # (e.g. SIGKILL during a deploy — no signal handler catches it, so the row is
         # simply abandoned at status='pending'). A row that old was never going to
@@ -107,9 +113,13 @@ async def _claim_and_send(
         delivery_id = await deps.repository.reclaim_stale_pending_delivery(
             subscription["id"], local_date, deps.max_attempts, stale_before
         )
+    else:
+        # 'sent', 'delivered', or any other terminal status — already resolved today.
+        delivery_id = None
+
     if delivery_id is None:
-        # Already sent/delivered today, retries exhausted, or claimed by another worker
-        # between our read and write — all fine, nothing to do.
+        # Retries exhausted, nothing stale yet, or claimed by another worker between our
+        # read and write — all fine, nothing to do.
         return
 
     await deps.delivery_service.send_daily_horoscope(subscription, delivery_id, local_date)
