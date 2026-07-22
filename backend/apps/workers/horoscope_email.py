@@ -94,28 +94,49 @@ async def _claim_and_send(
     # reaches an INSERT — every prior tick for the rest of the day used to attempt one
     # anyway and lose it to ON CONFLICT DO NOTHING, burning a bigserial id each time.
     status = await deps.repository.get_delivery_status(subscription["id"], local_date)
+    sub_id = subscription["id"]
 
     if status is None:
-        delivery_id = await deps.repository.claim_delivery(
-            subscription["id"], local_date, idempotency_key
-        )
+        delivery_id = await deps.repository.claim_delivery(sub_id, local_date, idempotency_key)
+        if delivery_id is None:
+            # Precheck saw no row, yet the INSERT still lost to ON CONFLICT DO NOTHING —
+            # a bigserial id just got burned for nothing. Shouldn't happen with one
+            # worker; repeated hits mean two worker processes are live at once.
+            logger.warning(
+                "sub=%s date=%s claim lost a race after a clean precheck", sub_id, local_date
+            )
+        else:
+            logger.info("sub=%s date=%s claimed delivery_id=%s", sub_id, local_date, delivery_id)
     elif status == "failed":
         delivery_id = await deps.repository.reclaim_failed_delivery(
-            subscription["id"], local_date, deps.max_attempts
+            sub_id, local_date, deps.max_attempts
         )
+        if delivery_id is not None:
+            logger.info(
+                "sub=%s date=%s retried failed delivery_id=%s", sub_id, local_date, delivery_id
+            )
+        else:
+            logger.warning(
+                "sub=%s date=%s gave up after max_attempts=%s",
+                sub_id,
+                local_date,
+                deps.max_attempts,
+            )
     elif status == "pending":
         # Covers a worker killed between claiming a delivery and recording its outcome
-        # (e.g. SIGKILL during a deploy — no signal handler catches it, so the row is
-        # simply abandoned at status='pending'). A row that old was never going to
-        # resolve on its own; treat it the same as a failed attempt and give it another
-        # try, still bounded by max_attempts.
+        # (e.g. SIGKILL during a deployment). Bounded by max_attempts like the failed path.
         stale_before = now_utc - timedelta(seconds=deps.stale_pending_seconds)
         delivery_id = await deps.repository.reclaim_stale_pending_delivery(
-            subscription["id"], local_date, deps.max_attempts, stale_before
+            sub_id, local_date, deps.max_attempts, stale_before
         )
+        if delivery_id is not None:
+            logger.info(
+                "sub=%s date=%s reclaimed stale delivery_id=%s", sub_id, local_date, delivery_id
+            )
     else:
         # 'sent', 'delivered', or any other terminal status — already resolved today.
         delivery_id = None
+        logger.debug("sub=%s date=%s already resolved (status=%s)", sub_id, local_date, status)
 
     if delivery_id is None:
         # Retries exhausted, nothing stale yet, or claimed by another worker between our
