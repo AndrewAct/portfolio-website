@@ -36,7 +36,7 @@ def make_delivery_service() -> DeliveryService:
         get_daily_horoscope=AsyncMock(return_value=HOROSCOPE),
     )
     return DeliveryService(
-        repository=repository, email_sender=email_sender, horoscope_service=horoscope_service
+        repository=repository, email_sender=email_sender, horoscope_service=horoscope_service  # ty:ignore[invalid-argument-type]
     )
 
 
