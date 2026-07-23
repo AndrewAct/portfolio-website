@@ -22,6 +22,7 @@ def make_deps(
 ) -> WorkerDeps:
     repository = SimpleNamespace(
         list_active=AsyncMock(return_value=subscriptions),
+        get_delivery_status=AsyncMock(return_value=None),
         claim_delivery=AsyncMock(return_value=42),
         reclaim_failed_delivery=AsyncMock(return_value=None),
         reclaim_stale_pending_delivery=AsyncMock(return_value=None),
@@ -56,6 +57,7 @@ async def test_tick_claims_and_sends_when_due():
     result = await tick(deps)
 
     assert result == TickResult(due=1, sent=1, skipped=0)
+    deps.repository.get_delivery_status.assert_awaited_once_with(1, date(2026, 7, 19))
     deps.repository.claim_delivery.assert_awaited_once_with(
         1, date(2026, 7, 19), "horoscope:1:2026-07-19"
     )
@@ -65,26 +67,31 @@ async def test_tick_claims_and_sends_when_due():
 
 
 @pytest.mark.asyncio
-async def test_tick_skips_when_already_claimed_and_not_retryable():
+async def test_tick_skips_when_already_resolved_today():
+    # status='sent' (or 'delivered', etc.) must short-circuit before any write is
+    # attempted — that's the whole point of the precheck: no wasted claim_delivery call.
     deps = make_deps([make_subscription()], now_utc=datetime(2026, 7, 19, 16, 0, tzinfo=UTC))
-    deps.repository.claim_delivery.return_value = None
-    deps.repository.reclaim_failed_delivery.return_value = None
+    deps.repository.get_delivery_status.return_value = "sent"
 
     result = await tick(deps)
 
     assert result == TickResult(due=1, sent=0, skipped=0)
     deps.delivery_service.send_daily_horoscope.assert_not_awaited()
+    deps.repository.claim_delivery.assert_not_awaited()
+    deps.repository.reclaim_failed_delivery.assert_not_awaited()
+    deps.repository.reclaim_stale_pending_delivery.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_tick_retries_via_reclaim_when_previous_attempt_failed():
     deps = make_deps([make_subscription()], now_utc=datetime(2026, 7, 19, 16, 0, tzinfo=UTC))
-    deps.repository.claim_delivery.return_value = None
+    deps.repository.get_delivery_status.return_value = "failed"
     deps.repository.reclaim_failed_delivery.return_value = 99
 
     result = await tick(deps)
 
     assert result.sent == 1
+    deps.repository.claim_delivery.assert_not_awaited()
     deps.repository.reclaim_failed_delivery.assert_awaited_once_with(1, date(2026, 7, 19), 5)
     deps.delivery_service.send_daily_horoscope.assert_awaited_once_with(
         make_subscription(), 99, date(2026, 7, 19)
@@ -94,18 +101,18 @@ async def test_tick_retries_via_reclaim_when_previous_attempt_failed():
 @pytest.mark.asyncio
 async def test_tick_reclaims_delivery_abandoned_mid_send_after_crash():
     # Simulates a worker killed between claiming a delivery and recording its outcome
-    # (e.g. SIGKILL during a deploy): the row already exists (claim_delivery -> None) and
-    # isn't 'failed' (reclaim_failed_delivery -> None) — only the stale-pending path
-    # should resume it.
+    # (e.g. SIGKILL during a deploy): the row is still status='pending' — only the
+    # stale-pending path should resume it.
     now_utc = datetime(2026, 7, 19, 16, 0, tzinfo=UTC)
     deps = make_deps([make_subscription()], now_utc=now_utc, stale_pending_seconds=300)
-    deps.repository.claim_delivery.return_value = None
-    deps.repository.reclaim_failed_delivery.return_value = None
+    deps.repository.get_delivery_status.return_value = "pending"
     deps.repository.reclaim_stale_pending_delivery.return_value = 77
 
     result = await tick(deps)
 
     assert result.sent == 1
+    deps.repository.claim_delivery.assert_not_awaited()
+    deps.repository.reclaim_failed_delivery.assert_not_awaited()
     deps.repository.reclaim_stale_pending_delivery.assert_awaited_once_with(
         1, date(2026, 7, 19), 5, now_utc - timedelta(seconds=300)
     )
@@ -116,11 +123,10 @@ async def test_tick_reclaims_delivery_abandoned_mid_send_after_crash():
 
 @pytest.mark.asyncio
 async def test_tick_does_not_reclaim_when_nothing_is_stale():
-    # claim_delivery/reclaim_failed_delivery/reclaim_stale_pending_delivery all miss —
-    # e.g. another (hypothetical) worker legitimately still has this in flight.
+    # status='pending' but not yet past the staleness window — e.g. another
+    # (hypothetical) worker legitimately still has this in flight.
     deps = make_deps([make_subscription()], now_utc=datetime(2026, 7, 19, 16, 0, tzinfo=UTC))
-    deps.repository.claim_delivery.return_value = None
-    deps.repository.reclaim_failed_delivery.return_value = None
+    deps.repository.get_delivery_status.return_value = "pending"
     deps.repository.reclaim_stale_pending_delivery.return_value = None
 
     result = await tick(deps)
@@ -181,7 +187,10 @@ async def test_dst_fall_back_repeated_hour_does_not_double_send():
 
     repository = SimpleNamespace(
         list_active=AsyncMock(return_value=[subscription]),
-        claim_delivery=AsyncMock(side_effect=[42, None]),
+        # First pass: no row yet -> claim_delivery. Second pass: first pass's send
+        # already resolved the row to 'sent' -> precheck skips without a second claim.
+        get_delivery_status=AsyncMock(side_effect=[None, "sent"]),
+        claim_delivery=AsyncMock(return_value=42),
         reclaim_failed_delivery=AsyncMock(return_value=None),
         reclaim_stale_pending_delivery=AsyncMock(return_value=None),
     )
@@ -194,10 +203,11 @@ async def test_dst_fall_back_repeated_hour_does_not_double_send():
     await tick(deps_second)
 
     assert delivery_service.send_daily_horoscope.await_count == 1
-    # Both claim attempts must target the same local_date, despite the UTC offset
+    repository.claim_delivery.assert_awaited_once()
+    # Both precheck calls must target the same local_date, despite the UTC offset
     # differing between them (PDT vs PST) — otherwise this whole test would be vacuous.
-    first_call_date = repository.claim_delivery.await_args_list[0].args[1]
-    second_call_date = repository.claim_delivery.await_args_list[1].args[1]
+    first_call_date = repository.get_delivery_status.await_args_list[0].args[1]
+    second_call_date = repository.get_delivery_status.await_args_list[1].args[1]
     assert first_call_date == second_call_date == date(2026, 11, 1)
 
 

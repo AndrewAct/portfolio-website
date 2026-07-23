@@ -205,6 +205,18 @@ class SubscriptionRepository:
 
     # --- deliveries ---
 
+    async def get_delivery_status(self, subscription_id: int, local_date: date) -> str | None:
+        """Read-only precheck the worker runs before attempting any claim/reclaim write.
+        Lets it skip subscriptions already resolved today without burning a bigserial id
+        on a doomed INSERT ... ON CONFLICT DO NOTHING. Returns None if no row exists yet."""
+        async with self._get_pool().acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT status FROM horoscope_deliveries WHERE subscription_id = $1 AND local_date = $2",
+                subscription_id,
+                local_date,
+            )
+            return row["status"] if row else None
+
     async def claim_delivery(
         self, subscription_id: int, local_date: date, idempotency_key: str
     ) -> int | None:

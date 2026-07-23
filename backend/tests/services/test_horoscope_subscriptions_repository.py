@@ -177,6 +177,29 @@ async def test_list_active_filters_by_status():
 
 
 @pytest.mark.asyncio
+async def test_get_delivery_status_returns_status_when_row_exists():
+    pool, conn = make_pool()
+    conn.fetchrow.return_value = {"status": "sent"}
+    repo = SubscriptionRepository(pool=pool)
+
+    result = await repo.get_delivery_status(1, date(2026, 7, 19))
+
+    assert result == "sent"
+    query, subscription_id, local_date = conn.fetchrow.await_args.args
+    assert "SELECT status FROM horoscope_deliveries" in query
+    assert (subscription_id, local_date) == (1, date(2026, 7, 19))
+
+
+@pytest.mark.asyncio
+async def test_get_delivery_status_returns_none_when_no_row():
+    pool, conn = make_pool()
+    conn.fetchrow.return_value = None
+    repo = SubscriptionRepository(pool=pool)
+
+    assert await repo.get_delivery_status(1, date(2026, 7, 19)) is None
+
+
+@pytest.mark.asyncio
 async def test_claim_delivery_returns_id_on_success():
     pool, conn = make_pool()
     conn.fetchrow.return_value = {"id": 7}
