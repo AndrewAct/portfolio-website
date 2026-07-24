@@ -75,7 +75,7 @@ async def test_tick_skips_when_already_resolved_today():
 
     result = await tick(deps)
 
-    assert result == TickResult(due=1, sent=0, skipped=0)
+    assert result == TickResult(due=1, sent=0, skipped=0, no_op=1)
     deps.delivery_service.send_daily_horoscope.assert_not_awaited()
     deps.repository.claim_delivery.assert_not_awaited()
     deps.repository.reclaim_failed_delivery.assert_not_awaited()
@@ -132,6 +132,7 @@ async def test_tick_does_not_reclaim_when_nothing_is_stale():
     result = await tick(deps)
 
     assert result.sent == 0
+    assert result.no_op == 1
     deps.delivery_service.send_daily_horoscope.assert_not_awaited()
 
 

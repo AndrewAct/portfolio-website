@@ -37,6 +37,7 @@ class TickResult:
     due: int = 0
     sent: int = 0
     skipped: int = 0
+    no_op: int = 0
 
 
 @dataclass
@@ -139,8 +140,10 @@ async def _claim_and_send(
         logger.debug("sub=%s date=%s already resolved (status=%s)", sub_id, local_date, status)
 
     if delivery_id is None:
-        # Retries exhausted, nothing stale yet, or claimed by another worker between our
-        # read and write — all fine, nothing to do.
+        # Retries exhausted, nothing stale yet, already resolved, or claimed by another
+        # worker between our read and write — all fine, nothing to do. Counted so
+        # due == sent + no_op (skipped is a disjoint bucket from _is_due, see above).
+        result.no_op += 1
         return
 
     await deps.delivery_service.send_daily_horoscope(subscription, delivery_id, local_date)
@@ -170,7 +173,11 @@ async def _run_tick_safely(deps: WorkerDeps) -> None:
         return
     if result.due:
         logger.info(
-            "Tick complete: due=%s sent=%s skipped=%s", result.due, result.sent, result.skipped
+            "Tick complete: due=%s sent=%s no_op=%s skipped=%s",
+            result.due,
+            result.sent,
+            result.no_op,
+            result.skipped,
         )
 
 
