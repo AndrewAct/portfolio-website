@@ -40,3 +40,4 @@ Check this file at the start of every session. Mark items done as you go.
 - [x] Add WrightSOP / 图匠 to the Projects page
 - [ ] Add more projects to the Projects page as they ship
 - [ ] Consider a shared `GlassPage.vue` layout component to DRY up the background + overlay + back-button pattern used by both `/projects` and `/utilities`
+- [ ] NFC digital business card: add a lightweight `/card` route (name, one-line intro, contact links, 2-3 project links) separate from the full homepage. Physical NTAG213 NFC tag gets programmed (via NFC Tools app) to open this URL — tap phone to tag instead of making people search for the site. Apple Wallet itself can't broadcast arbitrary NFC to other phones for general devs (VAS protocol is restricted to Apple partners like transit/loyalty), so the tag is the practical path, not a Wallet Pass.
