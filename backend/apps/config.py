@@ -43,8 +43,12 @@ class Settings(BaseSettings):
     # Base URL used to build links embedded in outbound emails
     public_base_url: str = "https://andrewcee.io"
 
-    # Horoscope email worker polling loop
-    worker_poll_interval_seconds: int = 60
+    # Horoscope email worker polling loop. Every tick is a real SELECT against Neon's
+    # direct endpoint — anything under ~5min keeps compute perpetually active and defeats
+    # scale-to-zero (confirmed 2026-08-17: 60s polling produced ~24/7 active billing,
+    # ~180 CU-hr/month). 900s (15min) trades up to 15min of delivery-time slack (fine for
+    # a once-daily email) for an estimated ~3x cut, to ~60 CU-hr/month.
+    worker_poll_interval_seconds: int = 900
     worker_max_delivery_attempts: int = 5
     # A delivery stuck at status='pending' longer than this was almost certainly
     # abandoned by a worker process killed mid-send (e.g. SIGKILL during a deploy, no
