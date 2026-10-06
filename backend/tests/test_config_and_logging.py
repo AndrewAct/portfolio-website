@@ -11,9 +11,6 @@ def make_settings(**overrides):
         "mongodb_password": "p@ss:/?#[]!",
         "mongodb_cluster": "cluster.example.net",
         "mongodb_database": "portfolio",
-        "grafana_api_key": "key",
-        "grafana_instance_id": "instance",
-        "grafana_otlp_endpoint": "https://otlp.example.net",
     }
     values.update(overrides)
     return Settings(**values)

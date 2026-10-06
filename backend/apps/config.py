@@ -11,10 +11,6 @@ class Settings(BaseSettings):
     mongodb_database: str
     is_development: bool = True  # Add this flag to control environment-specific settings
 
-    # Add variables for Grafana and OTLP
-    grafana_api_key: str
-    grafana_instance_id: str = ""
-    grafana_otlp_endpoint: str
     environment: str = "development"
 
     # Add variables for DeepSeek API key, OpenAI API KEY, Gemini API KEY
