@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gc
 import os
 import time
 from collections.abc import Iterable
@@ -80,6 +81,16 @@ class SystemMetrics:
             unit="1",
             description="Utilization of the container root filesystem.",
         )
+        self._meter.create_observable_counter(
+            "process.runtime.python.gc.collections",
+            callbacks=[self._observe_gc_collections],
+            description="Completed Python garbage-collection cycles.",
+        )
+        self._meter.create_observable_counter(
+            "process.runtime.python.gc.collected_objects",
+            callbacks=[self._observe_gc_collected_objects],
+            description="Python objects collected by garbage collection.",
+        )
         self._installed = True
 
     def _snapshot(self) -> SystemSnapshot:
@@ -135,6 +146,12 @@ class SystemMetrics:
     def _observe_filesystem_utilization(self, _options: CallbackOptions) -> Iterable[Observation]:
         snapshot = self._snapshot()
         return [Observation(snapshot.filesystem_usage / snapshot.filesystem_limit)]
+
+    def _observe_gc_collections(self, _options: CallbackOptions) -> Iterable[Observation]:
+        return _gc_observations("collections")
+
+    def _observe_gc_collected_objects(self, _options: CallbackOptions) -> Iterable[Observation]:
+        return _gc_observations("collected")
 
 
 def _read_int(path: Path) -> int | None:
@@ -193,3 +210,11 @@ def _cgroup_cpu_limit() -> float | None:
     if quota is not None and period and quota > 0:
         return max(quota / period, 1.0)
     return None
+
+
+def _gc_observations(stat_name: str) -> list[Observation]:
+    """Return cumulative CPython GC stats without creating per-object series."""
+    return [
+        Observation(stats[stat_name], {"gc.generation": str(generation)})
+        for generation, stats in enumerate(gc.get_stats())
+    ]
