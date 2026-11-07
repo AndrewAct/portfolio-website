@@ -15,17 +15,19 @@ class Settings(BaseSettings):
 
     # Horoscope AI failover chain, tried in order; providers without a key are skipped.
     # Names: google, openai, deepseek. Picked from scripts/eval_horoscope_prompt.py runs
-    # (2026-11-06): Gemini Flash-Lite is fastest (p50 2-5s) so it leads; DeepSeek read the
-    # most human but is slower (5-15s), so it backs Gemini up.
-    ai_provider_order: str = "google,deepseek"
+    # (2026-11-07): gpt-6.1-terra hit the length target in 47/48 with the most consistent
+    # quality in both languages, 3-5s per call; DeepSeek (2.5-5s sequential) and Gemini
+    # Flash-Lite (fast but short in Chinese) back it up. Gemini 3.8 Flash read better than
+    # Flash-Lite but timed out on 32/48 at default thinking; at "low" it took 3-5s.
+    ai_provider_order: str = "openai,deepseek,google"
     # Timeout for the OpenAI-compatible providers (Gemini keeps its own setting below).
-    # DeepSeek English p50 was ~15s; worst case Gemini 15s + 30s stays under nginx's 60s.
-    ai_timeout_seconds: int = 30
+    # Sequential calls take 2.5-7s; worst case 20s + 20s + Gemini 15s stays under nginx's 60s.
+    ai_timeout_seconds: int = 20
 
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.1-flash-lite"
     gemini_timeout_seconds: int = 15
-    # "minimal" is Flash-Lite only; Flash models accept "medium"/"high". Blank = model default.
+    # "minimal" is Flash-Lite only; change it together with the model ("low" for 3.8 Flash).
     gemini_thinking_level: str = "minimal"
 
     openai_api_key: str = ""

@@ -32,6 +32,34 @@ while the mock object itself still records how it was awaited. Use
 `mock.await_args_list` to inspect every awaited call. The displayed `call(...)` entries
 come from `unittest.mock.call`; they are call-record objects, not the mocked return value.
 
+## Horoscope writing material
+
+`backend/apps/services/horoscope/writing_material.py` contains 28 topics with four paired
+Chinese/English scenes each, 12 writing approaches, sign-inspired editorial preferences,
+and stock phrases to avoid. `ReadingAngle` in `prompting.py` means the writing brief:
+one topic, one selected scene, and one approach. These are possibilities for the model
+to develop, not facts about the reader.
+
+Selection uses local, date-seeded random generators. Each sign draws seven topics without
+replacement per Monday-Sunday week; its six preferred topics receive weight 2 and the
+others weight 1. A boundary swap avoids repeating Sunday's topic on Monday. This favors
+some material without confining any sign to a narrow set of topics. Different signs can
+share a topic on the same day. Given the same catalog/code, sign and date, the selected
+material stays the same across calls and languages; the model's final wording can vary.
+No database, history lookup or extra model request is needed.
+
+To inspect actual model output, run this from `backend/` with a configured API key
+(it makes paid API calls; it does not start FastAPI):
+
+```bash
+PYTHONPATH=. uv run python scripts/eval_horoscope_prompt.py \
+  --candidate openai:gpt-6.1-terra --reasoning-effort low --days 2 \
+  --out /tmp/horoscope-eval.jsonl
+```
+
+The script checks structure, length, stock phrases and repetition. Read the raw samples
+as well: those metrics cannot establish warmth, coherence or freedom from stereotyping.
+
 ## Production configuration
 
 The backend image never contains credentials. On the server, keep the Compose file,

@@ -20,6 +20,7 @@ import json
 import re
 import statistics
 import time
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from difflib import SequenceMatcher
@@ -30,6 +31,7 @@ from apps.services.horoscope.ai_provider import build_provider
 from apps.services.horoscope.prompting import (
     BANNED_PHRASES_EN,
     BANNED_PHRASES_ZH,
+    READING_LENGTH,
     ZODIAC_EN,
     ZODIAC_ZH,
     build_prompt,
@@ -38,7 +40,13 @@ from apps.services.horoscope.service import GeneratedHoroscope, HoroscopeService
 
 GENDERS = {"zh": ("女性", "男性"), "en": ("female", "male")}
 REASONING_EFFORT = ""
+GEMINI_THINKING_LEVEL = ""
 CJK = re.compile(r"[一-鿿]")
+# Verbal tics seen in real samples; counts are "readings containing it", not occurrences.
+WATCH_WORDS = {
+    "zh": ("值得", "留意", "其实", "不必", "反而", "不妨", "轻松", "接下来"),
+    "en": ("worth noticing", "look forward", "you might find", "perfectly fine", "it is "),
+}
 
 
 def legacy_prompt(language: str, sign: str, gender: str, day: date) -> str:
@@ -99,7 +107,8 @@ def make_provider(candidate: Candidate):
     overrides: dict[str, str] = {}
     if candidate.provider == "google":
         overrides["gemini_model"] = candidate.model
-        overrides["gemini_thinking_level"] = "minimal" if "flash-lite" in candidate.model else ""
+        lite_default = "minimal" if "flash-lite" in candidate.model else ""
+        overrides["gemini_thinking_level"] = GEMINI_THINKING_LEVEL or lite_default
     elif candidate.provider == "openai":
         overrides["openai_model"] = candidate.model
         overrides["openai_reasoning_effort"] = REASONING_EFFORT
@@ -164,21 +173,40 @@ def mean_pairwise_jaccard(texts: list[str]) -> float:
     return statistics.mean(scores) if scores else 0.0
 
 
+def top_mood_token(language: str, moods: list[str]) -> str:
+    """Most shared mood fragment: 2-char runs for zh, words for en. Catches 从容自在/自在从容."""
+    counts: Counter[str] = Counter()
+    for mood in moods:
+        tokens = (
+            {mood[i : i + 2] for i in range(len(mood) - 1)}
+            if language == "zh"
+            else set(mood.lower().split()) - {"and"}
+        )
+        counts.update(tokens)
+    token, count = counts.most_common(1)[0] if counts else ("", 0)
+    return f"{token} {count}/{len(moods)}"
+
+
 def summarize(candidate: Candidate, language: str) -> dict[str, object]:
     samples = [s for s in candidate.samples if s.language == language]
     ok = [s for s in samples if not s.error]
     banned = BANNED_PHRASES_ZH if language == "zh" else BANNED_PHRASES_EN
     lengths = [text_length(language, s.text) for s in ok]
+    low, high = READING_LENGTH["zh" if language == "zh" else "en"]
     return {
         "candidate": candidate.label,
         "lang": language,
         "ok": f"{len(ok)}/{len(samples)}",
-        "len_in_100_150": f"{sum(100 <= n <= 150 for n in lengths)}/{len(ok)}",
+        f"len_in_{low}_{high}": f"{sum(low <= n <= high for n in lengths)}/{len(ok)}",
         "len_median": statistics.median(lengths) if lengths else 0,
         "banned_hit": f"{sum(any(p in s.text.lower() for p in banned) for s in ok)}/{len(ok)}",
         "prompt_copy": f"{sum(copies_prompt(s) for s in ok)}/{len(ok)}",
         "similarity": round(mean_pairwise_jaccard([s.text for s in ok]), 3),
         "distinct_mood": f"{len({s.mood for s in ok})}/{len(ok)}",
+        "top_mood_token": top_mood_token(language, [s.mood for s in ok]),
+        "watch_words": {
+            w: sum(w in s.text.lower() for s in ok) for w in WATCH_WORDS.get(language, ())
+        },
         "p50_s": round(statistics.median(s.seconds for s in samples), 2) if samples else 0,
         "first_error": next((s.error for s in samples if s.error), ""),
     }
@@ -191,11 +219,13 @@ async def main() -> None:
     parser.add_argument("--start", type=date.fromisoformat, default=date.today())
     parser.add_argument("--languages", default="zh,en")
     parser.add_argument("--reasoning-effort", default="")
+    parser.add_argument("--gemini-thinking-level", default="", help="e.g. low; blank = default")
     parser.add_argument("--out", type=Path, default=Path("horoscope_eval_samples.jsonl"))
     args = parser.parse_args()
 
-    global REASONING_EFFORT
+    global REASONING_EFFORT, GEMINI_THINKING_LEVEL
     REASONING_EFFORT = args.reasoning_effort
+    GEMINI_THINKING_LEVEL = args.gemini_thinking_level
     days = [args.start + timedelta(days=offset) for offset in range(args.days)]
     languages = args.languages.split(",")
     await asyncio.gather(*(run_candidate(c, days, languages) for c in args.candidate))

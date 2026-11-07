@@ -34,6 +34,7 @@ def test_gemini_defaults_target_stable_low_latency_model():
     settings = make_settings()
 
     assert settings.gemini_model == "gemini-3.1-flash-lite"
+    assert settings.gemini_thinking_level == "minimal"
     assert settings.gemini_timeout_seconds == 15
 
 
