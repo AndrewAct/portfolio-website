@@ -1,16 +1,19 @@
 import random
+from collections.abc import Sequence
 from datetime import date
 from typing import Any
 
 from pydantic import BaseModel, Field, ValidationError
 
-# logger = setup_logging("Horoscope")
 from ...config import get_settings
 from ...core.logger import setup_logging
 from ...monitoring.ai_generation import AIGenerationRequest, ai_generation_telemetry
-from .ai_provider import AIProvider, GeminiProvider
+from .ai_provider import AIProvider, build_providers
+from .prompting import ZODIAC_EN, ZODIAC_ZH, build_prompt
 
 settings = get_settings()
+
+OPERATION = "horoscope_generation"
 
 
 class GeneratedHoroscope(BaseModel):
@@ -23,47 +26,15 @@ class GeneratedHoroscope(BaseModel):
 
 
 class HoroscopeService:
-    def __init__(self, provider: AIProvider | None = None):
-        self.provider = provider or GeminiProvider(
-            api_key=settings.gemini_api_key,
-            model_name=settings.gemini_model,
-            timeout_seconds=settings.gemini_timeout_seconds,
-        )
-        self.zodiac_names = {
-            "en": [
-                "Aries",
-                "Taurus",
-                "Gemini",
-                "Cancer",
-                "Leo",
-                "Virgo",
-                "Libra",
-                "Scorpio",
-                "Sagittarius",
-                "Capricorn",
-                "Aquarius",
-                "Pisces",
-            ],
-            "zh": [
-                "白羊座",
-                "金牛座",
-                "双子座",
-                "巨蟹座",
-                "狮子座",
-                "处女座",
-                "天秤座",
-                "天蝎座",
-                "射手座",
-                "摩羯座",
-                "水瓶座",
-                "双鱼座",
-            ],
-        }
+    def __init__(self, providers: Sequence[AIProvider] | None = None):
+        self.providers = list(providers) if providers is not None else build_providers(settings)
+        self.zodiac_names = {"en": list(ZODIAC_EN), "zh": list(ZODIAC_ZH)}
         self.logger = setup_logging("Horoscope")
 
     async def close(self):
-        """Release the selected provider's connection pools."""
-        await self.provider.close()
+        """Release every provider's connection pools."""
+        for provider in self.providers:
+            await provider.close()
 
     def get_zodiac_sign(self, birthdate: date, language: str = "en") -> tuple[str, str]:
         """Determine zodiac sign based on birthdate."""
@@ -89,41 +60,51 @@ class HoroscopeService:
     async def get_daily_horoscope(
         self, zodiac_sign: str, gender: str, language: str = "en"
     ) -> dict[str, Any]:
-        """Generate a daily horoscope using the configured AI provider."""
-        request = AIGenerationRequest(
-            provider=self.provider.provider_name,
-            model=self.provider.model_name,
-            operation="horoscope_generation",
-        )
-        if not self.provider.is_configured:
-            self.logger.warning(
-                "AI provider %s is not configured; using local fallback", request.provider
-            )
-            ai_generation_telemetry.record_generation(request, "fallback_not_configured")
+        """Try each configured provider in order; the local template is the last resort."""
+        configured = [provider for provider in self.providers if provider.is_configured]
+        primary = configured[0] if configured else self.providers[0]
+        chain_request = AIGenerationRequest(primary.provider_name, primary.model_name, OPERATION)
+        if not configured:
+            self.logger.warning("No AI provider is configured; using local fallback")
+            ai_generation_telemetry.record_generation(chain_request, "fallback_not_configured")
             return self._generate_fallback_horoscope(zodiac_sign, language)
 
         try:
             prompt = self._prompt_generator(language, zodiac_sign, gender)
-            with ai_generation_telemetry.observe_request(request):
-                response = await self.provider.generate_structured(
-                    prompt=prompt,
-                    response_schema=GeneratedHoroscope,
+        except (TypeError, ValueError):
+            self.logger.exception("Horoscope prompt could not be built; using local fallback")
+            ai_generation_telemetry.record_generation(chain_request, "fallback_invalid_response")
+            return self._generate_fallback_horoscope(zodiac_sign, language)
+
+        last_outcome = "fallback_request_error"
+        for provider in configured:
+            request = AIGenerationRequest(provider.provider_name, provider.model_name, OPERATION)
+            try:
+                with ai_generation_telemetry.observe_request(request):
+                    response = await provider.generate_structured(
+                        prompt=prompt, response_schema=GeneratedHoroscope
+                    )
+                generated = self._parse_generated_horoscope(response)
+            except (AttributeError, TypeError, ValueError, ValidationError):
+                self.logger.exception(
+                    "AI provider %s/%s returned an invalid horoscope",
+                    request.provider,
+                    request.model,
                 )
-            generated = self._parse_generated_horoscope(response)
+                last_outcome = "fallback_invalid_response"
+                continue
+            except Exception:
+                self.logger.exception(
+                    "AI provider %s/%s horoscope request failed", request.provider, request.model
+                )
+                last_outcome = "fallback_request_error"
+                continue
             ai_generation_telemetry.record_generation(request, "success")
             return self._localize_generated_horoscope(generated, zodiac_sign, language)
-        except (AttributeError, TypeError, ValueError, ValidationError):
-            self.logger.exception("AI provider returned an invalid horoscope; using local fallback")
-            ai_generation_telemetry.record_generation(request, "fallback_invalid_response")
-            return self._generate_fallback_horoscope(zodiac_sign, language)
-        except Exception:
-            self.logger.exception(
-                "AI provider %s horoscope request failed for model %s; using local fallback",
-                request.provider,
-                request.model,
-            )
-            ai_generation_telemetry.record_generation(request, "fallback_request_error")
-            return self._generate_fallback_horoscope(zodiac_sign, language)
+
+        self.logger.error("Every AI provider failed; using local fallback")
+        ai_generation_telemetry.record_generation(chain_request, last_outcome)
+        return self._generate_fallback_horoscope(zodiac_sign, language)
 
     @staticmethod
     def _parse_generated_horoscope(response: Any) -> GeneratedHoroscope:
@@ -253,28 +234,10 @@ class HoroscopeService:
         return index
 
     @staticmethod
-    def _prompt_generator(language: str, zodiac_sign: str, gender: str):
-        today = date.today().isoformat()
-        if language == "zh":
-            prompt = f"""为一位{gender}的{zodiac_sign}生成{today}的中文星座运势，作为轻松的娱乐内容。
-
-要求：
-1. 使用温暖、自然、有人情味的语气，避免通用模板和重复表述
-2. 结合{zodiac_sign}的性格特点，写出具体且可行动的建议
-3. 保持积极但不要断言未来，也不要夸张或制造焦虑
-4. 运势正文控制在100-150个汉字
-5. compatibility 和 mood 必须使用中文"""
-        else:
-            prompt = f"""Write an English horoscope-style reading for {today} for a {gender} {zodiac_sign}. Treat it as light entertainment.
-
-Requirements:
-1. Sound warm, natural, and human; avoid generic templates and repeated phrases
-2. Connect a recognizable {zodiac_sign} trait to one concrete, actionable suggestion
-3. Stay encouraging without claiming certainty, exaggerating, or creating anxiety
-4. Keep the reading between 100 and 150 words
-5. Return compatibility and mood in English"""
-
-        return prompt
+    def _prompt_generator(
+        language: str, zodiac_sign: str, gender: str, day: date | None = None
+    ) -> str:
+        return build_prompt(language, zodiac_sign, gender, day or date.today())
 
     @staticmethod
     def _get_horoscope_templates(language: str = "en"):

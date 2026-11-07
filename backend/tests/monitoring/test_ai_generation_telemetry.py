@@ -59,8 +59,26 @@ def test_telemetry_marks_provider_errors_before_reraising():
         with telemetry.observe_request(request):
             raise RuntimeError("provider unavailable")
 
-    attributes = request.attributes(outcome="error")
+    attributes = request.attributes(outcome="error", **{"error.type": "RuntimeError"})
     telemetry._requests.add.assert_called_once_with(1, attributes)
     telemetry._duration.record.assert_called_once()
     span.record_exception.assert_called_once()
     span.set_status.assert_called_once()
+
+
+class _StatusError(Exception):
+    status_code = 402
+
+
+class _CodeError(Exception):
+    code = 429
+
+
+@pytest.mark.parametrize(
+    ("error", "expected"),
+    [(_StatusError(), "402"), (_CodeError(), "429"), (TimeoutError(), "TimeoutError")],
+)
+def test_error_type_prefers_http_status_over_class_name(error, expected):
+    from apps.monitoring.ai_generation import _error_type
+
+    assert _error_type(error) == expected

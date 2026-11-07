@@ -71,8 +71,9 @@ class AIGenerationTelemetry:
                 yield
             except Exception as exc:
                 span.record_exception(exc)
-                span.set_status(Status(StatusCode.ERROR, type(exc).__name__))
-                attributes = request.attributes(outcome="error")
+                error_type = _error_type(exc)
+                span.set_status(Status(StatusCode.ERROR, error_type))
+                attributes = request.attributes(outcome="error", **{"error.type": error_type})
                 self._requests.add(1, attributes)
                 self._duration.record(perf_counter() - started, attributes)
                 raise
@@ -80,6 +81,16 @@ class AIGenerationTelemetry:
                 attributes = request.attributes(outcome="success")
                 self._requests.add(1, attributes)
                 self._duration.record(perf_counter() - started, attributes)
+
+
+def _error_type(exc: Exception) -> str:
+    """Bounded label: the HTTP status when the SDK exposes one (402 billing vs 429 rate
+    limit), else the exception class name (timeouts, connection errors)."""
+    for attribute in ("status_code", "code"):
+        value = getattr(exc, attribute, None)
+        if isinstance(value, int):
+            return str(value)
+    return type(exc).__name__
 
 
 ai_generation_telemetry = AIGenerationTelemetry()
