@@ -10,6 +10,11 @@ from time import perf_counter
 from opentelemetry import metrics, trace
 from opentelemetry.trace import SpanKind, Status, StatusCode
 
+# Seconds, sized to real provider latency (2-8s typical, AI_TIMEOUT_SECONDS=20). The SDK
+# default (0, 5, 10, 25, ... 10000) assumes milliseconds, so every request landed in (0, 5]
+# and histogram_quantile always reported p50=2.5s / p95=4.75s.
+REQUEST_DURATION_BUCKETS_SECONDS = (0.5, 1, 2, 3, 4, 5, 6, 8, 10, 15, 20, 30)
+
 
 @dataclass(frozen=True)
 class AIGenerationRequest:
@@ -48,6 +53,7 @@ class AIGenerationTelemetry:
             "portfolio.ai.generation.request.duration",
             unit="s",
             description="AI provider request duration.",
+            explicit_bucket_boundaries_advisory=REQUEST_DURATION_BUCKETS_SECONDS,
         )
 
     def record_generation(self, request: AIGenerationRequest, outcome: str) -> None:

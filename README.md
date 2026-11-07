@@ -87,6 +87,44 @@ python3 -c "import secrets; print(secrets.token_urlsafe(48))"
 Use a different value per environment (local `.env` vs. server `backend.env`); rotating it
 invalidates every link that's already been emailed out.
 
+## Observability
+
+Both processes export OTLP metrics to Grafana Cloud: the API through FastAPI's native
+telemetry (`OTEL_SERVICE_NAME=portfolio-api`), and the email worker through
+`apps/monitoring/worker_metrics.py` (`portfolio-horoscope-worker`). AI metrics live in
+`apps/monitoring/ai_generation.py` and are labeled with `ai_provider` / `ai_model` /
+`ai_operation` / `outcome`:
+
+| OTel name | Prometheus name | Meaning |
+| --- | --- | --- |
+| `portfolio.ai.generation.total` | `portfolio_ai_generation_total` | One per reading served: `success` or `fallback_*` (static template) |
+| `portfolio.ai.generation.request.total` | `portfolio_ai_generation_request_total` | One per provider call; errors carry `error_type` (`402`, `429`, `TimeoutError`, ...) |
+| `portfolio.ai.generation.request.duration` | `portfolio_ai_generation_request_duration_seconds_bucket` | Provider latency in seconds |
+
+**Do not use `increase()` or `rate()` on these counters.** Traffic is a handful of events a
+day, and each process gets a random `service.instance.id`, so every series is born already
+at 1. `increase()` needs an earlier sample to diff against, so it reads that first event as
+0. The dashboard showed 0 generations while Explore showed the series at 1. Count per series
+instead: this is exact because a series never resets (one series per process):
+
+```promql
+sum(
+  (last_over_time(portfolio_ai_generation_total{ai_operation="horoscope_generation"}[24h])
+   - last_over_time(portfolio_ai_generation_total{ai_operation="horoscope_generation"}[5m] offset 24h))
+  or last_over_time(portfolio_ai_generation_total{ai_operation="horoscope_generation"}[24h])
+)
+```
+
+Apply the same pattern to the `_bucket` series inside `histogram_quantile` (rolling 24h p50/p95).
+Alert rules using this pattern: `monitoring/grafana/horoscope-ai-alerts.yaml`.
+
+The latency histogram declares second-scale buckets (`REQUEST_DURATION_BUCKETS_SECONDS`).
+The SDK default buckets (`0, 5, 10, 25, …, 10000`) assume milliseconds. With them, every 3–5s call
+landed in `(0, 5]` and p50/p95 always read exactly 2.5s / 4.75s.
+
+Production `backend.env` still has `ENVIRONMENT=dev`, so series are labeled
+`deployment_environment="dev"`. Don't filter dashboards on `production` until that changes.
+
 * Homepage
 
 ![image info](./images/homepage.png)
@@ -124,6 +162,7 @@ collision across two different rows is judged unlikely, not proven impossible.
 
 ### Roadmap
 - [ ] Horoscope subscription: let users edit their timezone (auto-detected via browser `Intl.DateTimeFormat`, no manual override exists yet in either the subscribe or preferences form)
+- [x] OpenTelemetry metrics/traces to Grafana Cloud: HTTP, system/GC, AI generation dashboards and alerts (Nov 2026)
 - [x] New feature: Project (TickSense.ai) (May 21, 2026)
 - [x] Refactor frontend for better aesthetic (May 21, 2026)
 - [x] New feature: Horoscope

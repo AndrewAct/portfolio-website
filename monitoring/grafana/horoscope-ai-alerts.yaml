@@ -12,6 +12,12 @@
 # them in Explore before relying on the rules:
 #   portfolio.ai.generation.total          -> portfolio_ai_generation_total
 #   portfolio.ai.generation.request.total  -> portfolio_ai_generation_request_total
+#
+# Why not increase(): these counters see a handful of events a day, and each process has a
+# fresh service.instance.id, so every series is born already at 1. increase() needs a prior
+# sample and reads that as 0 — the first 402 after a deploy would never alert. Instead count
+# per series: last value in window minus value at window start, or the whole value if the
+# series was born inside the window. Exact because a series never resets (one per process).
 apiVersion: 1
 groups:
   - orgId: 1
@@ -30,8 +36,11 @@ groups:
             model:
               refId: A
               expr: >-
-                sum(increase(portfolio_ai_generation_total{ai_operation="horoscope_generation",
-                outcome=~"fallback_.*"}[30m]))
+                sum(
+                (last_over_time(portfolio_ai_generation_total{ai_operation="horoscope_generation",outcome=~"fallback_.*"}[30m])
+                - last_over_time(portfolio_ai_generation_total{ai_operation="horoscope_generation",outcome=~"fallback_.*"}[5m] offset 30m))
+                or last_over_time(portfolio_ai_generation_total{ai_operation="horoscope_generation",outcome=~"fallback_.*"}[30m])
+                )
           - refId: B
             datasourceUid: __expr__
             model: { refId: B, type: reduce, expression: A, reducer: last }
@@ -64,9 +73,11 @@ groups:
             model:
               refId: A
               expr: >-
-                sum by (ai_provider, ai_model, error_type)
-                (increase(portfolio_ai_generation_request_total{ai_operation="horoscope_generation",
-                outcome="error"}[1h]))
+                sum by (ai_provider, ai_model, error_type) (
+                (last_over_time(portfolio_ai_generation_request_total{ai_operation="horoscope_generation",outcome="error"}[1h])
+                - last_over_time(portfolio_ai_generation_request_total{ai_operation="horoscope_generation",outcome="error"}[5m] offset 1h))
+                or last_over_time(portfolio_ai_generation_request_total{ai_operation="horoscope_generation",outcome="error"}[1h])
+                )
           - refId: B
             datasourceUid: __expr__
             model: { refId: B, type: reduce, expression: A, reducer: last }
