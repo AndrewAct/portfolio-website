@@ -1,6 +1,5 @@
 import json
 from datetime import date
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -11,30 +10,35 @@ from apps.services.horoscope.router import get_horoscope_service, router
 from apps.services.horoscope.service import GeneratedHoroscope, HoroscopeService
 
 
-class FakeModels:
-    def __init__(self, response=None, error: Exception | None = None):
+class FakeProvider:
+    provider_name = "test-provider"
+    model_name = "test-model"
+
+    def __init__(
+        self,
+        response=None,
+        error: Exception | None = None,
+        *,
+        is_configured: bool = True,
+    ):
         self.response = response
         self.error = error
         self.calls = []
+        self.is_configured = is_configured
+        self.close = AsyncMock()
 
-    async def generate_content(self, **kwargs):
+    async def generate_structured(self, **kwargs):
         self.calls.append(kwargs)
         if self.error:
             raise self.error
         return self.response
 
-    def list(self):
-        if self.error:
-            raise self.error
-        return [SimpleNamespace(name="models/flash")]
 
-
-def service_with_response(text: str | None = None, parsed=None) -> HoroscopeService:
-    service = HoroscopeService()
-    service.api_key = "test-key"
-    models = FakeModels(SimpleNamespace(text=text, parsed=parsed))
-    service.client = SimpleNamespace(models=models, aio=SimpleNamespace(models=models))
-    return service
+def service_with_response(
+    text: str | None = None, parsed=None
+) -> tuple[HoroscopeService, FakeProvider]:
+    provider = FakeProvider(Mock(text=text, parsed=parsed))
+    return HoroscopeService(providers=[provider]), provider
 
 
 @pytest.mark.parametrize(
@@ -76,22 +80,17 @@ def test_prompts_and_templates_are_localized():
 
 
 @pytest.mark.asyncio
-async def test_close_releases_sync_and_async_clients():
-    service = HoroscopeService()
-    service.client = None
+async def test_close_releases_every_provider():
+    provider = FakeProvider()
+    service = HoroscopeService(providers=[provider])
     await service.close()
 
-    async_client = SimpleNamespace(aclose=AsyncMock())
-    service.client = SimpleNamespace(aio=async_client, close=Mock())
-    await service.close()
-
-    async_client.aclose.assert_awaited_once()
-    service.client.close.assert_called_once()
+    provider.close.assert_awaited_once()
 
 
 @pytest.mark.asyncio
 async def test_daily_horoscope_falls_back_without_api_key(monkeypatch):
-    service = HoroscopeService()
+    service = HoroscopeService(providers=[FakeProvider(is_configured=False)])
     fallback = {"source": "fallback"}
     monkeypatch.setattr(service, "_generate_fallback_horoscope", Mock(return_value=fallback))
 
@@ -108,7 +107,7 @@ async def test_daily_horoscope_uses_fast_lite_structured_output():
             "mood": "Calm",
         }
     )
-    service = service_with_response(response)
+    service, provider = service_with_response(response)
 
     result = await service.get_daily_horoscope("Aries", "neutral")
 
@@ -120,11 +119,9 @@ async def test_daily_horoscope_uses_fast_lite_structured_output():
         "compatibility": "Taurus",
         "mood": "Calm",
     }
-    call = service.client.aio.models.calls[0]
-    assert call["model"] == "gemini-3.1-flash-lite"
-    assert call["config"].response_mime_type == "application/json"
-    assert call["config"].response_schema is GeneratedHoroscope
-    assert call["config"].thinking_config.thinking_level.value == "MINIMAL"
+    call = provider.calls[0]
+    assert call["response_schema"] is GeneratedHoroscope
+    assert "Aries" in call["prompt"]
 
 
 @pytest.mark.asyncio
@@ -135,7 +132,7 @@ async def test_daily_horoscope_accepts_sdk_parsed_model():
         compatibility="Leo",
         mood="Grounded",
     )
-    service = service_with_response(parsed=parsed)
+    service, _ = service_with_response(parsed=parsed)
 
     result = await service.get_daily_horoscope("Gemini", "female")
 
@@ -151,7 +148,7 @@ async def test_daily_horoscope_maps_chinese_sign_to_english():
         "compatibility": "金牛座",
         "mood": "平静",
     }
-    service = service_with_response(json.dumps(payload))
+    service, _ = service_with_response(json.dumps(payload))
 
     result = await service.get_daily_horoscope("白羊座", "女性", "zh")
 
@@ -162,7 +159,7 @@ async def test_daily_horoscope_maps_chinese_sign_to_english():
 @pytest.mark.asyncio
 @pytest.mark.parametrize("failure", ["invalid-json", None])
 async def test_daily_horoscope_falls_back_for_invalid_response(failure, monkeypatch):
-    service = service_with_response(failure)
+    service, _ = service_with_response(failure)
     fallback = {"source": "fallback"}
     monkeypatch.setattr(service, "_generate_fallback_horoscope", Mock(return_value=fallback))
 
@@ -171,10 +168,7 @@ async def test_daily_horoscope_falls_back_for_invalid_response(failure, monkeypa
 
 @pytest.mark.asyncio
 async def test_daily_horoscope_falls_back_when_api_raises(monkeypatch):
-    service = HoroscopeService()
-    service.api_key = "key"
-    models = FakeModels(error=RuntimeError("offline"))
-    service.client = SimpleNamespace(models=models, aio=SimpleNamespace(models=models))
+    service = HoroscopeService(providers=[FakeProvider(error=RuntimeError("offline"))])
     fallback = {"source": "fallback"}
     monkeypatch.setattr(service, "_generate_fallback_horoscope", Mock(return_value=fallback))
 
@@ -183,7 +177,7 @@ async def test_daily_horoscope_falls_back_when_api_raises(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_daily_horoscope_falls_back_when_prompt_generation_raises(monkeypatch):
-    service = HoroscopeService()
+    service = HoroscopeService(providers=[FakeProvider()])
     fallback = {"source": "fallback"}
     monkeypatch.setattr(service, "_prompt_generator", Mock(side_effect=ValueError("bad prompt")))
     monkeypatch.setattr(service, "_generate_fallback_horoscope", Mock(return_value=fallback))
@@ -248,3 +242,79 @@ async def test_horoscope_http_contract_for_sign_and_birthdate():
     assert by_sign.status_code == 200
     assert by_date.json()["daily_horoscope"] == "Forecast for 白羊座"
     assert by_date_with_slash.status_code == 200
+
+
+def _valid_payload() -> str:
+    return json.dumps(
+        {"daily_horoscope": "Ok.", "lucky_number": 3, "compatibility": "Leo", "mood": "Calm"}
+    )
+
+
+def _named_provider(name: str, **kwargs) -> FakeProvider:
+    provider = FakeProvider(**kwargs)
+    provider.provider_name = name
+    return provider
+
+
+@pytest.fixture
+def recorded_outcomes(monkeypatch):
+    outcomes = []
+    monkeypatch.setattr(
+        "apps.services.horoscope.service.ai_generation_telemetry.record_generation",
+        lambda request, outcome: outcomes.append((request.provider, outcome)),
+    )
+    return outcomes
+
+
+@pytest.mark.asyncio
+async def test_chain_fails_over_to_next_provider(recorded_outcomes):
+    primary = _named_provider("google", error=RuntimeError("402 credits depleted"))
+    secondary = _named_provider("openai", response=Mock(text=_valid_payload(), parsed=None))
+    service = HoroscopeService(providers=[primary, secondary])
+
+    result = await service.get_daily_horoscope("Aries", "female")
+
+    assert result["daily_horoscope"] == "Ok."
+    assert primary.calls[0]["prompt"] == secondary.calls[0]["prompt"]
+    assert recorded_outcomes == [("openai", "success")]
+
+
+@pytest.mark.asyncio
+async def test_chain_skips_unconfigured_providers(recorded_outcomes):
+    missing_key = _named_provider("google", is_configured=False)
+    configured = _named_provider("deepseek", response=Mock(text=_valid_payload(), parsed=None))
+    service = HoroscopeService(providers=[missing_key, configured])
+
+    await service.get_daily_horoscope("Aries", "female")
+
+    assert missing_key.calls == []
+    assert recorded_outcomes == [("deepseek", "success")]
+
+
+@pytest.mark.asyncio
+async def test_chain_falls_back_to_template_with_last_failure_outcome(
+    recorded_outcomes, monkeypatch
+):
+    invalid = _named_provider("google", response=Mock(text="not json", parsed=None))
+    offline = _named_provider("openai", error=TimeoutError())
+    service = HoroscopeService(providers=[invalid, offline])
+    monkeypatch.setattr(service, "_generate_fallback_horoscope", Mock(return_value={"x": 1}))
+
+    assert await service.get_daily_horoscope("Aries", "female") == {"x": 1}
+    assert len(invalid.calls) == len(offline.calls) == 1
+    assert recorded_outcomes == [("google", "fallback_request_error")]
+
+
+@pytest.mark.asyncio
+async def test_close_releases_all_providers_in_chain():
+    first, second = FakeProvider(), FakeProvider()
+    await HoroscopeService(providers=[first, second]).close()
+
+    first.close.assert_awaited_once()
+    second.close.assert_awaited_once()
+
+
+def test_prompt_generator_accepts_an_explicit_day():
+    prompt = HoroscopeService._prompt_generator("en", "Aries", "male", date(2026, 1, 2))
+
+    assert "2026-01-02" in prompt

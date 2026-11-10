@@ -49,6 +49,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - ENV=production
+      - OTEL_SERVICE_NAME=portfolio-horoscope-worker
 
 networks:
   default:

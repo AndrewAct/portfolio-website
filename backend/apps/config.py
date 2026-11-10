@@ -11,18 +11,36 @@ class Settings(BaseSettings):
     mongodb_database: str
     is_development: bool = True  # Add this flag to control environment-specific settings
 
-    # Add variables for Grafana and OTLP
-    grafana_api_key: str
-    grafana_instance_id: str = ""
-    grafana_otlp_endpoint: str
     environment: str = "development"
 
-    # Add variables for DeepSeek API key, OpenAI API KEY, Gemini API KEY
-    deepseek_api_key: str = ""
-    openai_api_key: str = ""
+    # Horoscope AI failover chain, tried in order; providers without a key are skipped.
+    # Names: google, openai, deepseek. Picked from scripts/eval_horoscope_prompt.py runs
+    # (2026-11-07): gpt-6.1-terra hit the length target in 47/48 with the most consistent
+    # quality in both languages, 3-5s per call; DeepSeek (2.5-5s sequential) and Gemini
+    # Flash-Lite (fast but short in Chinese) back it up. Gemini 3.8 Flash read better than
+    # Flash-Lite but timed out on 32/48 at default thinking; at "low" it took 3-5s.
+    ai_provider_order: str = "openai,deepseek,google"
+    # Timeout for the OpenAI-compatible providers (Gemini keeps its own setting below).
+    # Sequential calls take 2.5-7s; worst case 20s + 20s + Gemini 15s stays under nginx's 60s.
+    ai_timeout_seconds: int = 20
+
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.1-flash-lite"
     gemini_timeout_seconds: int = 15
+    # "minimal" is Flash-Lite only; change it together with the model ("low" for 3.8 Flash).
+    gemini_thinking_level: str = "minimal"
+
+    openai_api_key: str = ""
+    # gpt-5.4-mini ran short in Chinese (median 94 chars); gpt-6.1-terra hit 100-150 in 23/24.
+    openai_model: str = "gpt-6.1-terra"
+    # Blank omits the parameter (model default).
+    openai_reasoning_effort: str = "low"
+
+    deepseek_api_key: str = ""
+    deepseek_model: str = "deepseek-flash"
+    deepseek_base_url: str = "https://api.deepseek.com"
+    # Blank = DeepSeek's default ("high"); "low" measured no faster for this short task.
+    deepseek_reasoning_effort: str = ""
 
     # Neon Postgres — horoscope email subscriptions (separate from the MongoDB URL shortener store)
     database_url: str

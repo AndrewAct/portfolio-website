@@ -1,0 +1,98 @@
+# Grafana alert rules for horoscope AI generation (Grafana alerting provisioning format).
+#
+# Why: on 2026-11-06 Gemini prepaid credits ran out (HTTP 402) and every reading silently
+# fell back to the static per-sign template; it was noticed by reading the copy, not by an
+# alert, even though `outcome="fallback_request_error"` was already being exported.
+#
+# Import: Grafana Cloud -> Alerting -> Alert rules -> New alert rule -> paste the `expr`
+# below, or POST this file to the provisioning API. Replace PROMETHEUS_DATASOURCE_UID.
+#
+# Metric names assume Grafana Cloud's default OTLP -> Prometheus translation (dots become
+# underscores, counters keep a single `_total`, `error.type` becomes `error_type`). Confirm
+# them in Explore before relying on the rules:
+#   portfolio.ai.generation.total          -> portfolio_ai_generation_total
+#   portfolio.ai.generation.request.total  -> portfolio_ai_generation_request_total
+#
+# Why not increase(): these counters see a handful of events a day, and each process has a
+# fresh service.instance.id, so every series is born already at 1. increase() needs a prior
+# sample and reads that as 0 — the first 402 after a deploy would never alert. Instead count
+# per series: last value in window minus value at window start, or the whole value if the
+# series was born inside the window. Exact because a series never resets (one per process).
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: horoscope-ai
+    folder: portfolio
+    interval: 5m
+    rules:
+      # Every provider in AI_PROVIDER_ORDER failed for a request, so users got the template.
+      - uid: horoscope-ai-template-fallback
+        title: Horoscope served static template fallback
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 1800, to: 0 }
+            datasourceUid: PROMETHEUS_DATASOURCE_UID
+            model:
+              refId: A
+              expr: >-
+                sum(
+                (last_over_time(portfolio_ai_generation_total{ai_operation="horoscope_generation",outcome=~"fallback_.*"}[30m])
+                - last_over_time(portfolio_ai_generation_total{ai_operation="horoscope_generation",outcome=~"fallback_.*"}[5m] offset 30m))
+                or last_over_time(portfolio_ai_generation_total{ai_operation="horoscope_generation",outcome=~"fallback_.*"}[30m])
+                )
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions: [{ evaluator: { type: gt, params: [0] } }]
+        noDataState: OK
+        execErrState: Error
+        for: 0m
+        labels: { severity: critical }
+        annotations:
+          summary: Every horoscope AI provider failed; readers are getting the static template.
+          runbook: >-
+            Check backend logs for "Every AI provider failed" and the per-provider error above
+            it. 402 = prepaid credits depleted, 401 = bad/rotated key, 429 = rate limit.
+
+      # One provider keeps failing even if failover still serves AI text — catches a
+      # depleted/expired key before the backstop provider fails too.
+      - uid: horoscope-ai-provider-errors
+        title: Horoscope AI provider failing
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: PROMETHEUS_DATASOURCE_UID
+            model:
+              refId: A
+              expr: >-
+                sum by (ai_provider, ai_model, error_type) (
+                (last_over_time(portfolio_ai_generation_request_total{ai_operation="horoscope_generation",outcome="error"}[1h])
+                - last_over_time(portfolio_ai_generation_request_total{ai_operation="horoscope_generation",outcome="error"}[5m] offset 1h))
+                or last_over_time(portfolio_ai_generation_request_total{ai_operation="horoscope_generation",outcome="error"}[1h])
+                )
+          - refId: B
+            datasourceUid: __expr__
+            model: { refId: B, type: reduce, expression: A, reducer: last }
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions: [{ evaluator: { type: gt, params: [2] } }]
+        noDataState: OK
+        execErrState: Error
+        for: 0m
+        labels: { severity: warning }
+        annotations:
+          summary: >-
+            {{ $labels.ai_provider }}/{{ $labels.ai_model }} failed {{ $values.B }} times in 1h
+            (error_type={{ $labels.error_type }}); failover is masking it.

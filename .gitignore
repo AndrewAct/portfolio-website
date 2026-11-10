@@ -45,3 +45,4 @@ htmlcov/
 CLAUDE.md
 AGENTS.md
 ./.claude
+.claude/

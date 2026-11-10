@@ -12,13 +12,8 @@ from pydantic import BaseModel
 from apps.core.logger import setup_logging
 from apps.database.neon import close_db as close_postgres_db
 from apps.database.neon import init_db as init_postgres_db
-from apps.monitoring.metrics_collector import MetricsCollector
-from apps.monitoring.middleware import PrometheusMiddleware
-
-# from apps.monitoring.prometheus import PrometheusMiddleware
-# from apps.monitoring.middleware import PrometheusMiddleWare
-from apps.monitoring.prometheus import router as metrics_router
-from apps.monitoring.telemetry import setup_telemetry
+from apps.monitoring.environment import configure_otel_environment
+from apps.monitoring.system_metrics import SystemMetrics
 from apps.services.horoscope.router import get_horoscope_service
 from apps.services.horoscope.router import router as horoscope_router
 from apps.services.horoscope_subscriptions.router import get_subscription_service
@@ -34,8 +29,13 @@ from apps.services.url_shortener.router import api_router, redirect_router
 # Setup logging
 logger = setup_logging()
 
+# FastAPI configures its native OTLP exporters when lifespan starts. Populate the
+# standard variables before constructing the app, including for existing servers
+# that have not yet moved from the previous GRAFANA_* configuration.
+configure_otel_environment()
 
-metrics_collector = MetricsCollector(collection_interval=60)
+
+system_metrics = SystemMetrics()
 
 
 @asynccontextmanager
@@ -43,12 +43,10 @@ async def lifespan(_app: FastAPI):
     logger.info("Initializing database connections...")
     await init_db()
     await init_postgres_db()
-    metrics_collector.start()
+    system_metrics.install()
     try:
         yield
     finally:
-        logger.info("Stopping metrics collection...")
-        await metrics_collector.stop()
         logger.info("Closing Gemini client...")
         await get_horoscope_service().close()
         logger.info("Closing Resend client...")
@@ -63,6 +61,14 @@ app = FastAPI(
     description="Collection of utility services. Including Medium posts fetcher, URL shortener, and Horoscope",
     version="0.0.2",
     lifespan=lifespan,
+    telemetry={
+        "exclude": lambda scope: scope.get("path") == "/health",
+        # Keep trace volume suitable for Grafana Cloud's free tier: retain request
+        # spans and explicitly-created dependency spans (for Gemini), not every
+        # FastAPI dependency/serialization operation or application log record.
+        "operation_spans": False,
+        "logs": False,
+    },
 )
 
 # Get environment type (development or production)
@@ -196,14 +202,3 @@ app.include_router(
     prefix="/utilities/horoscope/webhooks",
     tags=["Horoscope Webhooks"],
 )
-
-
-# Add observability with OpenTelemetry
-setup_telemetry(app)
-
-# Add metrics endpoint
-app.include_router(metrics_router, tags=["Monitoring"])
-
-# Integrate middleware
-app.middleware("http")(PrometheusMiddleware())
-# app.add_middleware(PrometheusMiddleware)

@@ -11,9 +11,6 @@ def make_settings(**overrides):
         "mongodb_password": "p@ss:/?#[]!",
         "mongodb_cluster": "cluster.example.net",
         "mongodb_database": "portfolio",
-        "grafana_api_key": "key",
-        "grafana_instance_id": "instance",
-        "grafana_otlp_endpoint": "https://otlp.example.net",
     }
     values.update(overrides)
     return Settings(**values)
@@ -37,6 +34,7 @@ def test_gemini_defaults_target_stable_low_latency_model():
     settings = make_settings()
 
     assert settings.gemini_model == "gemini-3.1-flash-lite"
+    assert settings.gemini_thinking_level == "minimal"
     assert settings.gemini_timeout_seconds == 15
 
 

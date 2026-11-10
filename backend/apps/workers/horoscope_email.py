@@ -22,9 +22,11 @@ from datetime import UTC, datetime, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import asyncpg
+from opentelemetry.sdk.metrics import MeterProvider
 
 from ..config import get_settings
 from ..database.neon import close_db, init_db
+from ..monitoring.worker_metrics import configure_worker_metrics, shutdown_worker_metrics
 from ..services.horoscope_subscriptions.delivery_service import DeliveryService
 from ..services.horoscope_subscriptions.repository import SubscriptionRepository
 
@@ -151,6 +153,7 @@ async def _claim_and_send(
 
 
 async def run_forever() -> None:
+    metrics_provider = configure_worker_metrics()
     await init_db()
     deps = WorkerDeps(repository=SubscriptionRepository(), delivery_service=DeliveryService())
     logger.info(
@@ -161,7 +164,7 @@ async def run_forever() -> None:
             await _run_tick_safely(deps)
             await asyncio.sleep(settings.worker_poll_interval_seconds)
     finally:
-        await _shutdown(deps)
+        await _shutdown(deps, metrics_provider)
 
 
 async def _run_tick_safely(deps: WorkerDeps) -> None:
@@ -181,10 +184,11 @@ async def _run_tick_safely(deps: WorkerDeps) -> None:
         )
 
 
-async def _shutdown(deps: WorkerDeps) -> None:
+async def _shutdown(deps: WorkerDeps, metrics_provider: MeterProvider | None = None) -> None:
     await deps.delivery_service.email_sender.close()
     await deps.delivery_service.horoscope_service.close()
     await close_db()
+    shutdown_worker_metrics(metrics_provider)
 
 
 if __name__ == "__main__":

@@ -233,8 +233,13 @@ async def test_run_tick_safely_logs_only_when_something_was_due():
 async def test_run_forever_initializes_ticks_and_shuts_down(monkeypatch):
     init_db_mock = AsyncMock()
     close_db_mock = AsyncMock()
+    metrics_provider = Mock()
+    configure_metrics_mock = Mock(return_value=metrics_provider)
+    shutdown_metrics_mock = Mock()
     monkeypatch.setattr(horoscope_email, "init_db", init_db_mock)
     monkeypatch.setattr(horoscope_email, "close_db", close_db_mock)
+    monkeypatch.setattr(horoscope_email, "configure_worker_metrics", configure_metrics_mock)
+    monkeypatch.setattr(horoscope_email, "shutdown_worker_metrics", shutdown_metrics_mock)
 
     fake_repository = SimpleNamespace(list_active=AsyncMock(return_value=[]))
     fake_delivery_service = SimpleNamespace(
@@ -259,3 +264,5 @@ async def test_run_forever_initializes_ticks_and_shuts_down(monkeypatch):
     fake_delivery_service.email_sender.close.assert_awaited_once()
     fake_delivery_service.horoscope_service.close.assert_awaited_once()
     close_db_mock.assert_awaited_once()
+    configure_metrics_mock.assert_called_once_with()
+    shutdown_metrics_mock.assert_called_once_with(metrics_provider)
