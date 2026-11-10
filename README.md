@@ -87,6 +87,56 @@ python3 -c "import secrets; print(secrets.token_urlsafe(48))"
 Use a different value per environment (local `.env` vs. server `backend.env`); rotating it
 invalidates every link that's already been emailed out.
 
+### Short-link routing (`/r/<code>`)
+
+The redirect lives on the backend (`GET /r/{short_url}`), so production nginx must forward
+`/r/` to `backend:8000`. Without that rule, a short link falls through to the frontend, whose
+nginx serves `index.html` for unknown paths with HTTP 200. Vue then renders its catch-all
+`404 - Not Found` view, even though the short code exists and the backend is healthy.
+
+Incident, 2026-11-09: copied short links showed that 404. It surfaced the day the server moved
+to a static IP and DNS was updated, but the move was not the cause. The API lookup at
+`/utilities/url_shortener/<code>` still answered in about 0.12 s (an unreachable MongoDB would
+take the 5 s selection timeout), and the frontend calls `https://andrewcee.io`, not an IP. No
+committed version of `nginx/nginx.conf` or `frontend-v2/nginx.conf` has routed `/r/`; both date
+from the 2025-09-08 frontend rewrite, so links were probably broken since then, although the
+exact start is unproven.
+
+The fix was this block above `location /` in the server's mounted `nginx.conf`, followed by
+`nginx -t` and `nginx -s reload`:
+
+```nginx
+location /r/ {
+    proxy_pass http://backend:8000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+To verify, `curl -sI https://andrewcee.io/r/not-a-real-code` should return 404 with
+`application/json` from the backend. A 200 with `text/html` means the rule is missing.
+
+As of 2026-11-09 the rule exists only on the server. Add it to `nginx/nginx.conf` here before
+the next deploy overwrites it. Separately, `UrlShortenerWidget.vue` uses the scheme-less
+`shortened_url` as an `href`, so clicking a recent link in the widget resolves as a relative
+path and still 404s; copying and pasting works.
+
+### Server reboot and Compose notes
+
+Incident, 2026-11-09: the first reboot in 731 days took the site down. A host `nginx` package
+was still enabled at boot and took port 80, so `portfolio_nginx_1` failed to bind and showed
+"Welcome to nginx!" to visitors with HTTP 200. After the host service was disabled, the container
+crash-looped on `host not found in upstream "backend"` because the failed start had left it with
+no network. `docker-compose down` then `up -d` restored it. Host `nginx` is now disabled.
+
+- The server uses legacy `docker-compose` 1.29.2. Recreating an existing container fails with
+  `KeyError: 'ContainerConfig'`, so after changing configuration run `docker-compose down`
+  first. Never add `-v` unless you mean to delete volumes.
+- After a reboot, expect four containers and check the page itself, not only the status code.
+- The server compose file runs backend `0.1.14`, newer than the `0.1.3` tag in this repo.
+
 ## Observability
 
 Both processes export OTLP metrics to Grafana Cloud: the API through FastAPI's native
